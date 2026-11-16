@@ -628,8 +628,10 @@ Confirmed edges and domain notes from `.specify/memory/domain.md` become
 spec context. Three modes:
 
 - `contracts-only` — deterministic: copy the interface spec files found in
-  each member to `specs/<member>-baseline/contracts/<kind>/` (content
-  unchanged apart from UTF-8/LF), with an `INDEX.md` of sources, commits,
+  each member, plus the files they reference, to
+  `specs/<member>-baseline/contracts/` at the same relative path as in the
+  member (so `$ref`/`import` still resolve; content unchanged apart from
+  UTF-8/LF), with an `INDEX.md` of kinds, commits, unresolved references,
   and route handlers that have no spec
 - `auto [<member>...]` — also draft `specs/<member>-baseline/spec.md`:
   Overview, Interfaces, Data model, Behaviors, External dependencies, open
