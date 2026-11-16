@@ -110,7 +110,8 @@ over participating members only. The manifest's `domain` and
 (cycles allowed) and never affect dispatch; `speckit.multi-repo.domain`
 fills them from code evidence plus the team's context. Baseline specs
 (`specs/baseline/<member>/`, from `speckit.multi-repo.reverse`) describe
-what existing members do today — context for new features, never
+what existing members do today — read by `speckit.multi-repo.tasks`, cited
+in `specify`/`plan` prompts (Spec Kit does not load them itself), never
 dispatched. Governance is three constitution layers —
 workspace (`central/.specify/memory/constitution.md`), per-member-type file
 declared in the manifest, member-local — assembled at dispatch into

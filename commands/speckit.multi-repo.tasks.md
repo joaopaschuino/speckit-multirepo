@@ -26,7 +26,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multi-repo workspace (see the multi-repo extension README).`
    Note each member's `id`, `path`, `tasks_file` (default `tasks/<id>.md`), and `depends_on`.
 
-3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks.
+3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multi-repo.reverse`), read it too — its Interfaces, Data model, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does: a task that touches an interface, entity, or job listed there belongs to that member, and its member task should say it extends or changes the existing piece (cite the baseline line) rather than create it. Baseline statements marked `unconfirmed` are hints only — they never override what the task text says. Never write to `specs/baseline/`.
 
 4. **Classify each task to a member** (or to "central"):
    - A task belongs to a member when its target files, services, or explicit mentions match that member (e.g. paths under the member's repository, its AWS resource types — Lambda, Glue, SQS, Step Functions — or a `repo: <id>` tag in the task text)
@@ -95,7 +95,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    - Include a contract-check member (step 5a) in the table like any other member
    - Status column starts as `pending` for every member. The `multi-repo-implement` step keeps it current during dispatch (`pending → dispatched → verified | completed | failed`; `completed` means dispatched successfully with no Verification commands). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
 
-7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, and any ambiguous classifications you resolved.
+7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, any ambiguous classifications you resolved, which baselines were read, and any task that contradicts a `confirmed` baseline requirement (flag it — the feature may be changing intended behavior on purpose, but the user should know).
 
 ## Notes
 

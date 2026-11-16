@@ -25,7 +25,7 @@ This repository is the **central specs repository** of a multi-repo workspace wh
 | Baseline spec | `specs/baseline/<member-id>/spec.md` | `auto`, `guided` |
 | Proposed type constitution | `constitutions/<type>.md` (or `constitutions/<type>.proposed.md`) | `auto`, `guided` |
 
-A baseline directory is **not a feature**: it has no plan, no tasks, and is never dispatched. All baselines live under the single directory `specs/baseline/`, which has no numeric prefix whatever the member ids are, so Spec Kit's feature numbering (`specs/NNN-*`) ignores it; and baseline contracts sit at `specs/baseline/<member-id>/contracts/`, outside the `specs/<feature>/contracts/` pattern that feature tooling reads. Feature specs written later (`/speckit.specify`) read the baseline as context for "current behavior".
+A baseline directory is **not a feature**: it has no plan, no tasks, and is never dispatched. All baselines live under the single directory `specs/baseline/`, which has no numeric prefix whatever the member ids are, so Spec Kit's feature numbering (`specs/NNN-*`) ignores it; and baseline contracts sit at `specs/baseline/<member-id>/contracts/`, outside the `specs/<feature>/contracts/` pattern that feature tooling reads. Spec Kit's own commands do not look for baselines: to use one as "current behavior" while specifying or planning a feature, cite it in the prompt (e.g. `/speckit.specify … — current behavior: specs/baseline/orders/spec.md`). `/speckit.multi-repo.tasks` reads the baselines of the members a feature touches when it splits the tasks.
 
 It reuses the scan engine and the evidence model of `/speckit.multi-repo.domain` — same places to look, same bounded-scan rules, same confidence levels — but its output is specs, not manifest fields.
 
@@ -232,4 +232,4 @@ Never write outside `specs/baseline/<member-id>/` and `constitutions/`; never mo
 - Unscanned / not documented members and why.
 - Suggested manifest changes found during the scan (missing `communicates_with` edges, a member type without `constitution`), as YAML to apply by hand or via `/speckit.multi-repo.domain` / `/speckit.multi-repo.workspace` — **this command changed nothing in the manifest**.
 - Headless: a prominent note that **everything is unconfirmed** and how to review it (`/speckit.multi-repo.reverse guided <member-id>`).
-- Next step: start the first feature with `/speckit.specify` — it can read `specs/baseline/<member-id>/spec.md` as the current behavior — and run `/speckit.multi-repo.domain` if the domain map is missing or older than the baselines.
+- Next step: start the first feature with `/speckit.specify`, citing the relevant `specs/baseline/<member-id>/spec.md` in the prompt (Spec Kit does not load baselines on its own; `/speckit.multi-repo.tasks` does, when splitting tasks), and run `/speckit.multi-repo.domain` if the domain map is missing or older than the baselines.

@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unconfirmed
 - `/speckit.multi-repo.help` recommends `reverse` when the manifest declares
   members but no baseline specs exist
+- `/speckit.multi-repo.tasks` reads `specs/baseline/<member>/spec.md` when
+  present: tasks on existing interfaces/entities go to their owner as
+  extend/change, and tasks contradicting a confirmed baseline requirement are
+  flagged in the report. Spec Kit does not load baselines on its own — cite
+  them in the `/speckit.specify` / `/speckit.plan` prompt
 
 ### Changed
 

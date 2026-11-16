@@ -651,8 +651,12 @@ existing file is never overwritten — you get a diff and a
 The command writes only under `specs/` and `constitutions/`; it never
 modifies `workspace.yml` (it prints suggested manifest lines instead), and
 headless runs mark everything `unconfirmed`. Baseline directories are not
-features — no plan, no tasks, never dispatched — and new features read them
-as the current behavior. `/speckit.multi-repo.help` recommends the command
+features — no plan, no tasks, never dispatched. Spec Kit does not load them
+on its own: cite `specs/baseline/<member>/spec.md` in the `/speckit.specify`
+or `/speckit.plan` prompt to use it as the current behavior.
+`/speckit.multi-repo.tasks` reads the baselines of the members a feature
+touches, so tasks on existing interfaces and entities go to their owner as
+"extend/change", not "create". `/speckit.multi-repo.help` recommends the command
 when members exist but no baseline specs do.
 
 ## What lands in each repository
