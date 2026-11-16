@@ -655,8 +655,9 @@ features — no plan, no tasks, never dispatched. Spec Kit does not load them
 on its own: cite `specs/baseline/<member>/spec.md` in the `/speckit.specify`
 or `/speckit.plan` prompt to use it as the current behavior.
 `/speckit.multi-repo.tasks` reads the baselines of the members a feature
-touches, so tasks on existing interfaces and entities go to their owner as
-"extend/change", not "create". `/speckit.multi-repo.help` recommends the command
+touches: ownership follows what a member exposes (never what it only
+consumes), and a task on an interface or entity that already exists keeps its
+text but gets an "already exists — extend, do not recreate" note. `/speckit.multi-repo.help` recommends the command
 when members exist but no baseline specs do.
 
 ## What lands in each repository
