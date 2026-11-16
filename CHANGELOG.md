@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-16
+
+### Added
+
+- `/speckit.multi-repo.reverse` agent command (central repo): reverse-engineers
+  **baseline specs** from existing member repositories. Reuses the
+  `/speckit.multi-repo.domain` scan engine and evidence model (`file:line`,
+  snippet, confidence; bounded scans) and extends it with exposed contracts,
+  data model, behaviors, and implicit constitution signals; confirmed edges
+  and domain notes from `.specify/memory/domain.md` become spec context.
+  Modes: `contracts-only` copies and normalizes the members' interface specs
+  into `specs/baseline/<member>/contracts/` (deterministic, with an
+  `INDEX.md`); `auto [<member>...]` drafts
+  `specs/baseline/<member>/spec.md` (Overview, Interfaces, Data model,
+  Behaviors, External dependencies) with every statement marked
+  confirmed/unconfirmed; `guided [<member>]` builds it capability by
+  capability with the team — business rules, `intentional` behaviors as
+  requirements, `incidental` ones as *Observed behavior — not contractual* —
+  walking confirmed neighbours as a frontier. Proposes
+  `constitutions/<type>.md` from consistent patterns, never overwriting an
+  existing file (diff + `<type>.proposed.md`). Writes only under `specs/` and
+  `constitutions/`, never `workspace.yml`; headless runs mark everything
+  unconfirmed
+- `/speckit.multi-repo.help` recommends `reverse` when the manifest declares
+  members but no baseline specs exist
+- `/speckit.multi-repo.tasks` reads `specs/baseline/<member>/spec.md` when
+  present: ownership follows what a member exposes (never what it only
+  consumes), tasks on existing interfaces/entities keep their text but get an
+  "already exists — extend" note, and tasks contradicting a confirmed baseline requirement are
+  flagged in the report. Spec Kit does not load baselines on its own — cite
+  them in the `/speckit.specify` / `/speckit.plan` prompt
+
+### Changed
+
+- `/speckit.multi-repo.domain` skips `specs/baseline/` when reading feature
+  `contracts/` as evidence (baseline contracts are copies of member files)
+
+### Upgrade
+
+- Re-run the same `install.sh` command you used originally on the central
+  repository and on each member to register the new command. Manifests are
+  unchanged
+
 ## [0.7.2] - 2026-11-13
 
 ### Added

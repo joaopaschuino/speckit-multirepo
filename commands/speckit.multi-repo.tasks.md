@@ -26,7 +26,11 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multi-repo workspace (see the multi-repo extension README).`
    Note each member's `id`, `path`, `tasks_file` (default `tasks/<id>.md`), and `depends_on`.
 
-3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks.
+3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multi-repo.reverse`), read it too — its Interfaces, Data model, Behaviors, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does. Use it in two ways only:
+   - **Ownership**: only what a member *exposes* — its Interfaces and Data model sections — points to it as owner. A member that merely consumes an interface (it is in that member's External dependencies) is never made its owner by the baseline. Explicit targets in the task text (paths, services, a `repo: <id>` tag) always win; the baseline only breaks ties for tasks that name an interface or entity and nothing else.
+   - **Existing pieces**: when a task names an interface, entity, or job the owning member's baseline already lists, the member task gets a note under it (see step 5) saying it already exists, so the member's agent extends or changes it instead of recreating it.
+
+   Baseline statements marked `unconfirmed` are hints only — they never override what the task text says. Never write to `specs/baseline/`.
 
 4. **Classify each task to a member** (or to "central"):
    - A task belongs to a member when its target files, services, or explicit mentions match that member (e.g. paths under the member's repository, its AWS resource types — Lambda, Glue, SQS, Step Functions — or a `repo: <id>` tag in the task text)
@@ -37,6 +41,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
 5. **Write each member's task file** at `FEATURE_DIR/<member.tasks_file>`:
    - Start with a short header: feature name, member id, the member's `depends_on` list mirrored from the workspace manifest, and — when the member declares `constitution` in the manifest — the constitution file path (all informational)
    - Copy the member's tasks **preserving task IDs, phases, `[P]` parallel markers, and checkbox state** verbatim
+   - Under a task that names a piece the member's baseline already lists (step 3), add one indented, non-checkbox line — the task line itself stays verbatim: `  - Baseline: already exists — specs/baseline/<id>/spec.md:<line> (<confirmed|unconfirmed>); extend or change it, do not recreate it`. Regenerate these lines on every run.
    - Include a "Shared context" section pointing to `spec.md`, `plan.md`, and `contracts/` (relative to the feature directory) so the member's implement command can find them
    - End with a `## Verification` section: the objective checks the orchestrator runs **in the member repository** after the member's agent finishes. The member only counts as done when every command exits with its expected code — the agent's own report is not enough. Format (parsed mechanically — one bullet per command, `label: `command` → exit N`; the exit code defaults to 0 when omitted):
 
@@ -95,7 +100,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    - Include a contract-check member (step 5a) in the table like any other member
    - Status column starts as `pending` for every member. The `multi-repo-implement` step keeps it current during dispatch (`pending → dispatched → verified | completed | failed`; `completed` means dispatched successfully with no Verification commands). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
 
-7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, and any ambiguous classifications you resolved.
+7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, any ambiguous classifications you resolved, which baselines were read, and any task that contradicts a `confirmed` baseline requirement (flag it — the feature may be changing intended behavior on purpose, but the user should know).
 
 ## Notes
 

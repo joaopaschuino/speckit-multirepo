@@ -38,7 +38,7 @@ Read `.specify/workspace.yml` from the repo root. If it is missing or invalid, *
 
 For each member note `id`, `path` (relative to this repo root), any existing `domain` and `communicates_with`. Check which member paths exist on disk; members that are not cloned cannot be scanned — list them as *unscanned* in the report and never propose edges *from* them (edges *to* them may still appear from other members' code).
 
-Also note `specs/*/contracts/` in this repository: contract files between members are first-class evidence of communication.
+Also note `specs/*/contracts/` in this repository (skip `specs/baseline/`: baselines written by `/speckit.multi-repo.reverse` are copies of member files, not feature contracts — scan the member itself instead): contract files between members are first-class evidence of communication.
 
 ## Step 2 — Scan a member (shared by both modes)
 
