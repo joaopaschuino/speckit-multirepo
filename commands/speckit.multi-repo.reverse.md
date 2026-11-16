@@ -21,11 +21,11 @@ This repository is the **central specs repository** of a multi-repo workspace wh
 
 | Output | Path (central repository) | Written by |
 |--------|---------------------------|------------|
-| Interface specs, normalized | `specs/<member-id>-baseline/contracts/` | every mode |
-| Baseline spec | `specs/<member-id>-baseline/spec.md` | `auto`, `guided` |
+| Interface specs, normalized | `specs/baseline/<member-id>/contracts/` | every mode |
+| Baseline spec | `specs/baseline/<member-id>/spec.md` | `auto`, `guided` |
 | Proposed type constitution | `constitutions/<type>.md` (or `constitutions/<type>.proposed.md`) | `auto`, `guided` |
 
-A baseline directory is **not a feature**: it has no plan, no tasks, and is never dispatched. Its name has no numeric prefix, so Spec Kit's feature numbering ignores it. Feature specs written later (`/speckit.specify`) read the baseline as context for "current behavior".
+A baseline directory is **not a feature**: it has no plan, no tasks, and is never dispatched. All baselines live under the single directory `specs/baseline/`, which has no numeric prefix whatever the member ids are, so Spec Kit's feature numbering (`specs/NNN-*`) ignores it; and baseline contracts sit at `specs/baseline/<member-id>/contracts/`, outside the `specs/<feature>/contracts/` pattern that feature tooling reads. Feature specs written later (`/speckit.specify`) read the baseline as context for "current behavior".
 
 It reuses the scan engine and the evidence model of `/speckit.multi-repo.domain` — same places to look, same bounded-scan rules, same confidence levels — but its output is specs, not manifest fields.
 
@@ -49,7 +49,7 @@ If `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`),
 - **Domain notes** and the *Domains* table give the business vocabulary: use it for the *Overview* draft in `auto` (quoted, attributed to the map) and to phrase the business questions in `guided`.
 - **External systems** listed in the map are external dependencies, never members.
 
-Also note existing `specs/*-baseline/` directories (a previous run — see Step 5), `specs/*/contracts/` of real features (first-class interface evidence), and existing files under `constitutions/`.
+Also note existing `specs/baseline/*/` directories (a previous run — see Step 5), `specs/*/contracts/` of real features — excluding `specs/baseline/` — (first-class interface evidence), and existing files under `constitutions/`.
 
 ## Step 2 — Scan a member (shared by all modes)
 
@@ -96,7 +96,7 @@ Keep scans bounded: skip `node_modules/`, `.git/`, `vendor/`, `dist/`, `build/`,
 ## Mode A — `auto`
 
 1. Scan the selected members (Step 2) and run the `contracts-only` copy for them (Mode C, steps 2–3) so *Interfaces* can link to the copied files.
-2. Draft `specs/<member-id>-baseline/spec.md` per member (format in Step 3). Every statement is `unconfirmed`; *Overview* is drafted from the README, service name, domain notes, and capabilities — and says so.
+2. Draft `specs/baseline/<member-id>/spec.md` per member (format in Step 3). Every statement is `unconfirmed`; *Overview* is drafted from the README, service name, domain notes, and capabilities — and says so.
 3. Draft the constitution proposals (Step 4).
 4. Present the **proposal** — per member, the capability list with counts, the spec draft, open questions, and the constitution proposal (or its diff) — then the unscanned members.
 5. **Interactive**: ask the user to confirm or correct per member (and per statement when they want to), answer open questions, and add what the scan missed (`evidence: user`). Confirmed statements become `confirmed`; rejected ones are dropped; unanswered ones stay `unconfirmed`. Then write (Step 5).
@@ -121,14 +121,14 @@ The user can switch to a full sweep at any point (*"do the rest automatically"*)
 
 Deterministic: copy what the members already declare, infer nothing, ask nothing.
 
-1. For every cloned member (in `auto`/`guided`: the members being scanned), collect the **interface spec files** found in Step 2 (not route handlers, not inferred schemas). A file under a feature `specs/*/contracts/` in this repository is already central — skip it.
-2. Copy each file — and every file it references through a relative `$ref` / `import` / `include`, transitively — to `specs/<member-id>-baseline/contracts/<path>`, where `<path>` is the source path relative to the member root (`api/v2/orders.proto` → `contracts/api/v2/orders.proto`). Mirroring the member's layout keeps every relative reference resolvable without editing it, and keeps same-named files apart (`v1/orders.proto`, `v2/orders.proto`). Normalization is limited to: UTF-8, LF line endings, one trailing newline. Never reformat, reorder, rename, or edit content — references included. A reference that cannot resolve inside the member (it points outside the member root, to a URL, or to a missing file) is left as is and listed in the index as *unresolved*.
-3. Write `specs/<member-id>-baseline/contracts/INDEX.md`: one row per copied file — path, kind (`openapi` | `asyncapi` | `proto` | `graphql` | `jsonschema` | `pact`, or `referenced` for a file copied only because another one references it), source commit (`git -C <member-path> rev-parse --short HEAD`, or `uncommitted` when the file has local changes) — and a *Not copied* list of route handlers that have no interface spec (`file:line`, method, path), so the gap is visible, and the *unresolved* references. Re-runs replace copied files and the index in place; nothing else in the baseline directory is touched.
+1. For every cloned member (in `auto`/`guided`: the members being scanned), collect the **interface spec files** found in Step 2 (not route handlers, not inferred schemas). A file under a feature `specs/*/contracts/` in this repository (not `specs/baseline/`) is already central — skip it.
+2. Copy each file — and every file it references through a relative `$ref` / `import` / `include`, transitively — to `specs/baseline/<member-id>/contracts/<path>`, where `<path>` is the source path relative to the member root (`api/v2/orders.proto` → `contracts/api/v2/orders.proto`). Mirroring the member's layout keeps every relative reference resolvable without editing it, and keeps same-named files apart (`v1/orders.proto`, `v2/orders.proto`). Normalization is limited to: UTF-8, LF line endings, one trailing newline. Never reformat, reorder, rename, or edit content — references included. A reference that cannot resolve inside the member (it points outside the member root, to a URL, or to a missing file) is left as is and listed in the index as *unresolved*.
+3. Write `specs/baseline/<member-id>/contracts/INDEX.md`: one row per copied file — path, kind (`openapi` | `asyncapi` | `proto` | `graphql` | `jsonschema` | `pact`, or `referenced` for a file copied only because another one references it), source commit (`git -C <member-path> rev-parse --short HEAD`, or `uncommitted` when the file has local changes) — and a *Not copied* list of route handlers that have no interface spec (`file:line`, method, path), so the gap is visible, and the *unresolved* references. Re-runs replace copied files and the index in place; nothing else in the baseline directory is touched.
 4. Report per member: files copied, references resolved, undocumented routes, unscanned members. Suggest `auto` or `guided` to describe the rest.
 
 ## Step 3 — Baseline spec format
 
-`specs/<member-id>-baseline/spec.md`:
+`specs/baseline/<member-id>/spec.md`:
 
 ````markdown
 # Baseline: <member-id>
@@ -218,12 +218,12 @@ Writing rules:
 
 ## Step 5 — Write
 
-Create `specs/<member-id>-baseline/` as needed. For an existing `spec.md`:
+Create `specs/baseline/<member-id>/` as needed. For an existing `spec.md`:
 
 - generated by this command (header comment present) and all `unconfirmed` → replace it;
 - otherwise (contains `confirmed` statements, or hand-written) → interactive: show the diff, keep confirmed statements and the user's *Overview* unless the user replaces them, write after confirmation; headless: leave it untouched and write `spec.unconfirmed.md` next to it.
 
-Never write outside `specs/<member-id>-baseline/` and `constitutions/`; never modify `.specify/workspace.yml` or member repositories.
+Never write outside `specs/baseline/<member-id>/` and `constitutions/`; never modify `.specify/workspace.yml` or member repositories.
 
 ## Step 6 — Report
 
@@ -232,4 +232,4 @@ Never write outside `specs/<member-id>-baseline/` and `constitutions/`; never mo
 - Unscanned / not documented members and why.
 - Suggested manifest changes found during the scan (missing `communicates_with` edges, a member type without `constitution`), as YAML to apply by hand or via `/speckit.multi-repo.domain` / `/speckit.multi-repo.workspace` — **this command changed nothing in the manifest**.
 - Headless: a prominent note that **everything is unconfirmed** and how to review it (`/speckit.multi-repo.reverse guided <member-id>`).
-- Next step: start the first feature with `/speckit.specify` — it can read `specs/<member-id>-baseline/spec.md` as the current behavior — and run `/speckit.multi-repo.domain` if the domain map is missing or older than the baselines.
+- Next step: start the first feature with `/speckit.specify` — it can read `specs/baseline/<member-id>/spec.md` as the current behavior — and run `/speckit.multi-repo.domain` if the domain map is missing or older than the baselines.

@@ -61,7 +61,7 @@ check which of these exist and report the state they imply:
   (completed / failed / awaiting resume)
 
 In the central repository, also check — independently of any feature —
-whether baseline specs exist: `specs/*-baseline/spec.md` (written by
+whether baseline specs exist: `specs/baseline/*/spec.md` (written by
 `speckit.multi-repo.reverse`). Members declared in the manifest with no
 baseline at all mean a brownfield workspace whose existing code is not yet
 described by any spec.
@@ -89,7 +89,7 @@ exist.
 | Central, agent chat | `speckit.multi-repo.tasks` | splits `tasks.md` into `tasks/<member>.md` slices, root becomes an orchestration page |
 | Central, agent chat | `speckit.multi-repo.workspace [audit\|bootstrap]` | scaffolds or audits `.specify/workspace.yml`; `bootstrap` clones the missing members from their `url` |
 | Central, agent chat | `speckit.multi-repo.domain [auto\|guided <member>]` | maps the domain topology (`domain`, `communicates_with`) from evidence in member repos, writes `.specify/memory/domain.md` |
-| Central, agent chat | `speckit.multi-repo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/<member>-baseline/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
+| Central, agent chat | `speckit.multi-repo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/baseline/<member>/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
 | Central, terminal | `specify workflow run multi-repo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
 | Central, terminal | `specify workflow run multi-repo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
 | Central, terminal | `specify workflow run multi-repo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
@@ -109,7 +109,7 @@ over participating members only. The manifest's `domain` and
 `communicates_with` fields describe the runtime communication topology
 (cycles allowed) and never affect dispatch; `speckit.multi-repo.domain`
 fills them from code evidence plus the team's context. Baseline specs
-(`specs/<member>-baseline/`, from `speckit.multi-repo.reverse`) describe
+(`specs/baseline/<member>/`, from `speckit.multi-repo.reverse`) describe
 what existing members do today — context for new features, never
 dispatched. Governance is three constitution layers —
 workspace (`central/.specify/memory/constitution.md`), per-member-type file
@@ -135,7 +135,7 @@ conflicts resolve to the most restrictive rule.
 - Nobody knows which repos talk to which → `speckit.multi-repo.domain`
   (`auto` for a full sweep, `guided <member>` to walk the flow from one
   piece); the result is visible in `multi-repo-check`'s `topology` output.
-- Existing code, no specs (members declared, no `specs/*-baseline/`) →
+- Existing code, no specs (members declared, no `specs/baseline/*/`) →
   `speckit.multi-repo.reverse` before the first feature: `contracts-only`
   to centralize the interface specs, `auto` for a full draft, `guided
   <member>` to turn observed behavior into requirements with the team.

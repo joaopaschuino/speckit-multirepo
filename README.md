@@ -629,11 +629,11 @@ spec context. Three modes:
 
 - `contracts-only` — deterministic: copy the interface spec files found in
   each member, plus the files they reference, to
-  `specs/<member>-baseline/contracts/` at the same relative path as in the
+  `specs/baseline/<member>/contracts/` at the same relative path as in the
   member (so `$ref`/`import` still resolve; content unchanged apart from
   UTF-8/LF), with an `INDEX.md` of kinds, commits, unresolved references,
   and route handlers that have no spec
-- `auto [<member>...]` — also draft `specs/<member>-baseline/spec.md`:
+- `auto [<member>...]` — also draft `specs/baseline/<member>/spec.md`:
   Overview, Interfaces, Data model, Behaviors, External dependencies, open
   questions; confirm, write
 - `guided [<member>]` — start from one member: your answer to "what does it
@@ -684,7 +684,7 @@ Nothing else, by default:
 | Member's `.specify/feature.json` | Not written | The step runs with `persist_feature: false`, which sets `SPECIFY_FEATURE_NO_PERSIST=1` |
 | Workflow runs (`.specify/workflows/runs/`) | Central only | The orchestrator is the single status writer |
 | Spec/contract copies | None | The agent reads them live from the central repository |
-| Baseline specs (`specs/<member>-baseline/`) | Central | Written by `/speckit.multi-repo.reverse` from the member's code; members are only read |
+| Baseline specs (`specs/baseline/<member>/`) | Central | Written by `/speckit.multi-repo.reverse` from the member's code; members are only read |
 | Verification logs, retry feedback, report (`verification/`) | Central | Written by the orchestrator under the feature directory |
 
 **The one exception, opt-in:** `persist_feature: true` makes the member

@@ -16,9 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   data model, behaviors, and implicit constitution signals; confirmed edges
   and domain notes from `.specify/memory/domain.md` become spec context.
   Modes: `contracts-only` copies and normalizes the members' interface specs
-  into `specs/<member>-baseline/contracts/` (deterministic, with an
+  into `specs/baseline/<member>/contracts/` (deterministic, with an
   `INDEX.md`); `auto [<member>...]` drafts
-  `specs/<member>-baseline/spec.md` (Overview, Interfaces, Data model,
+  `specs/baseline/<member>/spec.md` (Overview, Interfaces, Data model,
   Behaviors, External dependencies) with every statement marked
   confirmed/unconfirmed; `guided [<member>]` builds it capability by
   capability with the team — business rules, `intentional` behaviors as
@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unconfirmed
 - `/speckit.multi-repo.help` recommends `reverse` when the manifest declares
   members but no baseline specs exist
+
+### Changed
+
+- `/speckit.multi-repo.domain` skips `specs/baseline/` when reading feature
+  `contracts/` as evidence (baseline contracts are copies of member files)
 
 ### Upgrade
 
