@@ -66,20 +66,20 @@ In each **member repository**:
 
 ```sh
 specify extension add multi-repo --from \
-  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v0.7.2.zip
+  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v0.8.0.zip
 ```
 
 In the **central specs repository**, the two commands above plus:
 
 ```sh
 specify workflow step add multi-repo-implement --from \
-  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v0.7.2/step-multi-repo-implement-v0.7.2.zip
+  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v0.8.0/step-multi-repo-implement-v0.8.0.zip
 specify workflow add multi-repo --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.7.2/workflow/multi-repo/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo/workflow.yml
 specify workflow add multi-repo-check --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.7.2/workflow/multi-repo-check/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo-check/workflow.yml
 specify workflow add multi-repo-bootstrap --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.7.2/workflow/multi-repo-bootstrap/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo-bootstrap/workflow.yml
 ```
 
 (The step install asks an interactive trust confirmation before downloading —
@@ -89,7 +89,7 @@ default-deny; answer `yes`.)
 
 ```sh
 ./install.sh central /path/to/central-repo                # local (--dev) mode
-./install.sh member  /path/to/member-repo --release v0.7.2 # release mode
+./install.sh member  /path/to/member-repo --release v0.8.0 # release mode
 ```
 
 `install.sh` runs, respectively:
@@ -112,9 +112,9 @@ idempotently. Nothing else in your repositories is touched; governance
 bundles are regenerated per dispatch, so there is nothing to migrate.
 
 ```sh
-./install.sh central /path/to/central-repo --release v0.7.2   # or --dev <clone-dir>
-./install.sh member  /path/to/member-a --release v0.7.2
-./install.sh member  /path/to/member-b --release v0.7.2
+./install.sh central /path/to/central-repo --release v0.8.0   # or --dev <clone-dir>
+./install.sh member  /path/to/member-a --release v0.8.0
+./install.sh member  /path/to/member-b --release v0.8.0
 
 specify workflow run multi-repo-check   # verify: every member should report ready
 ```
@@ -612,6 +612,47 @@ communication table (from, to, channel, direction, confidence, evidence),
 external systems, and the team's notes per domain. `/speckit.multi-repo.tasks`
 reads that map when assigning integration tasks to members.
 
+## Baseline specs for existing code — `/speckit.multi-repo.reverse`
+
+A workspace adopted over existing repositories has code but no specs.
+`/speckit.multi-repo.reverse` (agent command, central repo) reverse-engineers
+a **baseline** per member — what it does today — with the same scan engine
+and evidence model as `/speckit.multi-repo.domain`: every statement cites
+`file:line` with a confidence level and is marked `confirmed` (reviewed by
+the team) or `unconfirmed` (inferred). Beyond communication, the scan reads
+exposed contracts (OpenAPI/proto/GraphQL/AsyncAPI files, route handlers),
+the data model (migrations, ORM models, `*.sql`, IaC table definitions),
+behaviors (queue/topic consumers, scheduled jobs, state machines), and
+implicit conventions (error handling, auth middleware, logging, naming).
+Confirmed edges and domain notes from `.specify/memory/domain.md` become
+spec context. Three modes:
+
+- `contracts-only` — deterministic: copy the interface spec files found in
+  each member to `specs/<member>-baseline/contracts/<kind>/` (content
+  unchanged apart from UTF-8/LF), with an `INDEX.md` of sources, commits,
+  and route handlers that have no spec
+- `auto [<member>...]` — also draft `specs/<member>-baseline/spec.md`:
+  Overview, Interfaces, Data model, Behaviors, External dependencies, open
+  questions; confirm, write
+- `guided [<member>]` — start from one member: your answer to "what does it
+  do for the business?" becomes the Overview verbatim; findings are grouped
+  by discovered capability, you state the business rule of each and classify
+  every behavior as `intentional` (a `FR-NNN … MUST` requirement) or
+  `incidental` (*Observed behavior — not contractual*); confirmed neighbours
+  become the next stops, external systems stay external dependencies, and
+  you can switch to an automatic sweep at any time
+
+From consistent patterns it also proposes **type constitutions**
+(`constitutions/<type>.md`, rules with prevalence and counterexamples): an
+existing file is never overwritten — you get a diff and a
+`<type>.proposed.md` — and headless runs only ever write `.proposed.md`.
+The command writes only under `specs/` and `constitutions/`; it never
+modifies `workspace.yml` (it prints suggested manifest lines instead), and
+headless runs mark everything `unconfirmed`. Baseline directories are not
+features — no plan, no tasks, never dispatched — and new features read them
+as the current behavior. `/speckit.multi-repo.help` recommends the command
+when members exist but no baseline specs do.
+
 ## What lands in each repository
 
 The design principle: **all feature state lives in the central repository;
@@ -641,6 +682,7 @@ Nothing else, by default:
 | Member's `.specify/feature.json` | Not written | The step runs with `persist_feature: false`, which sets `SPECIFY_FEATURE_NO_PERSIST=1` |
 | Workflow runs (`.specify/workflows/runs/`) | Central only | The orchestrator is the single status writer |
 | Spec/contract copies | None | The agent reads them live from the central repository |
+| Baseline specs (`specs/<member>-baseline/`) | Central | Written by `/speckit.multi-repo.reverse` from the member's code; members are only read |
 | Verification logs, retry feedback, report (`verification/`) | Central | Written by the orchestrator under the feature directory |
 
 **The one exception, opt-in:** `persist_feature: true` makes the member
