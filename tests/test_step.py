@@ -962,6 +962,8 @@ def test_verification_failure_retries_with_feedback(
     assert len(s3_calls[0]["args"].split(" ")) == 2
     assert s3_calls[1]["args"].endswith("verification/s3.feedback.md")
     assert "## unit — exit 2, expected 0" in feedback_seen[0]
+    assert "and some failed" in feedback_seen[0]
+    assert "All checks passed" not in feedback_seen[0]
     assert "fixed missing" in feedback_seen[0]
     assert "Checks already passing: lint." in feedback_seen[0]
     assert "| s3 | tasks/s3.md | — | verified |" in (feature / "tasks.md").read_text(
