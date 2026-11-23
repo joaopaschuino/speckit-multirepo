@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -50,14 +52,22 @@ class FakeIntegration:
     """Stands in for a real integration in dispatch tests.
 
     Records every dispatch_command call for assertions; ``fail_repos`` maps
-    member id -> exit code so tests can simulate failures.
+    member id -> exit code so tests can simulate failures. A successful
+    dispatch checks off the member's tasks, as a real agent does; members in
+    ``leave_open`` leave them open.
     """
 
     key = "fake"
 
-    def __init__(self, calls: list[dict[str, Any]], fail_repos: dict[str, int] | None = None):
+    def __init__(
+        self,
+        calls: list[dict[str, Any]],
+        fail_repos: dict[str, int] | None = None,
+        leave_open: set[str] | None = None,
+    ):
         self._calls = calls
         self._fail_repos = fail_repos or {}
+        self._leave_open = leave_open or set()
 
     def build_exec_args(self, prompt, **_kwargs):
         return ["fake-agent", "-p", prompt]
@@ -75,7 +85,21 @@ class FakeIntegration:
             }
         )
         exit_code = self._fail_repos.get(member_id, 0)
+        if exit_code == 0 and member_id not in self._leave_open:
+            check_off_tasks(args)
         return {"exit_code": exit_code, "stdout": "", "stderr": "boom" if exit_code else ""}
+
+
+def check_off_tasks(args: str) -> None:
+    """Mark every open task of the dispatched task file done (first argument)."""
+    feature = os.environ.get("SPECIFY_FEATURE_DIRECTORY")
+    tokens = args.split()
+    if not feature or not tokens:
+        return
+    tasks = Path(feature) / tokens[0]
+    if tasks.is_file():
+        text = tasks.read_text(encoding="utf-8")
+        tasks.write_text(re.sub(r"(?m)^(\s*[-*]\s+)\[ \]", r"\1[X]", text), encoding="utf-8")
 
 
 def write_workspace(

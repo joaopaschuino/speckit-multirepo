@@ -46,7 +46,9 @@ provides:
 hooks:
   after_tasks:
     command: speckit.multirepo.tasks
-    optional: true
+    # Mandatory: the core tasks command rewrites tasks.md and drops the orchestration table, which only this
+    # command rebuilds.
+    optional: false
     prompt: "Split tasks across workspace members?"
     description: "Split the generated tasks into per-member task files based on .specify/workspace.yml"
 

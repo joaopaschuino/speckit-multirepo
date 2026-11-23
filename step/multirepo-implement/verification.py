@@ -350,6 +350,18 @@ def write_feedback(
                 "```",
             ]
         )
+    open_tasks = verification.get("open_tasks") or []
+    if open_tasks:
+        lines.extend(
+            [
+                "",
+                f"## Open tasks — {len(open_tasks)} still unchecked in `{tasks_file}`",
+                "",
+                "Every check passed, but the member is done only when every task is",
+                "done. Finish these (and check them off), or report why one cannot",
+                f"be done: {', '.join(open_tasks)}.",
+            ]
+        )
     passed = [c["name"] for c in verification["commands"] if c["status"] == "passed"]
     if passed:
         lines.extend(["", f"Checks already passing: {', '.join(passed)}."])
