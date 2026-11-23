@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install (or upgrade in place) the multi-repo extension components in a
+# Install (or upgrade in place) the multirepo extension components in a
 # Spec Kit project.
 #
 # Usage:
@@ -79,24 +79,24 @@ if [ "$mode" = "dev" ]; then
   "$SPECIFY_BIN" extension add "$src" --dev --force
   require_installed "$(ext_version "$src/extension.yml")"
   if [ "$role" = "central" ]; then
-    "$SPECIFY_BIN" workflow step add multi-repo-implement --dev "$src/step/multi-repo-implement" --force
-    "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo" --dev
-    "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo-check" --dev
-    "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo-bootstrap" --dev
+    "$SPECIFY_BIN" workflow step add multirepo-implement --dev "$src/step/multirepo-implement" --force
+    "$SPECIFY_BIN" workflow add "$src/workflow/multirepo" --dev
+    "$SPECIFY_BIN" workflow add "$src/workflow/multirepo-check" --dev
+    "$SPECIFY_BIN" workflow add "$src/workflow/multirepo-bootstrap" --dev
   fi
 else
   ext_zip="https://github.com/$REPO/archive/refs/tags/$release.zip"
-  wf_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo/workflow.yml"
-  wf_check_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-check/workflow.yml"
-  wf_bootstrap_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-bootstrap/workflow.yml"
-  step_zip="https://github.com/$REPO/releases/download/$release/step-multi-repo-implement-$release.zip"
+  wf_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multirepo/workflow.yml"
+  wf_check_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multirepo-check/workflow.yml"
+  wf_bootstrap_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multirepo-bootstrap/workflow.yml"
+  step_zip="https://github.com/$REPO/releases/download/$release/step-multirepo-implement-$release.zip"
   "$SPECIFY_BIN" extension add multirepo --from "$ext_zip" --force
   require_installed "${release#v}"
   if [ "$role" = "central" ]; then
-    "$SPECIFY_BIN" workflow step add multi-repo-implement --from "$step_zip" --force
-    "$SPECIFY_BIN" workflow add multi-repo --from "$wf_url"
-    "$SPECIFY_BIN" workflow add multi-repo-check --from "$wf_check_url"
-    "$SPECIFY_BIN" workflow add multi-repo-bootstrap --from "$wf_bootstrap_url"
+    "$SPECIFY_BIN" workflow step add multirepo-implement --from "$step_zip" --force
+    "$SPECIFY_BIN" workflow add multirepo --from "$wf_url"
+    "$SPECIFY_BIN" workflow add multirepo-check --from "$wf_check_url"
+    "$SPECIFY_BIN" workflow add multirepo-bootstrap --from "$wf_bootstrap_url"
   fi
 fi
 

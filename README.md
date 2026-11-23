@@ -1,6 +1,6 @@
-# multi-repo — Spec Kit workspace orchestration
+# multirepo — Spec Kit workspace orchestration
 
-Orchestrate spec-driven development across a **multi-repo workspace**: one
+Orchestrate spec-driven development across a **multirepo workspace**: one
 **central specs repository** owns the feature specs, and implementation is
 dispatched headlessly to each **member repository** (Lambda, Glue, SQS, Step
 Functions, …) in dependency order.
@@ -32,7 +32,7 @@ central specs repo                    member repos
    Spec Kit commands.
 2. `/speckit.multirepo.tasks` splits `tasks.md` into `tasks/<member>.md`
    files and rewrites the root `tasks.md` as an orchestration page.
-3. `specify workflow run multi-repo` dispatches `speckit.multirepo.implement`
+3. `specify workflow run multirepo` dispatches `speckit.multirepo.implement`
    to each member with a participating task file, in topological waves
    computed from `workspace.yml`. Each member's agent runs with its own repo
    as the working directory and the central feature directory exported via
@@ -58,7 +58,7 @@ repos initialized with `specify init --integration <agent>`.
 Upgrade with `specify self upgrade` (uv-tool and pipx installs are upgraded
 automatically; `--dry-run` previews first). On Spec Kit 1.0.x, the
 extension and workflows still install, but the step has to be copied by
-hand: `cp -R step/multi-repo-implement <central>/.specify/workflows/steps/`.
+hand: `cp -R step/multirepo-implement <central>/.specify/workflows/steps/`.
 
 ### From a GitHub release (no clone needed)
 
@@ -72,14 +72,14 @@ specify extension add multirepo --from \
 In the **central specs repository**, the two commands above plus:
 
 ```sh
-specify workflow step add multi-repo-implement --from \
-  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v1.0.0/step-multi-repo-implement-v1.0.0.zip
-specify workflow add multi-repo --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo/workflow.yml
-specify workflow add multi-repo-check --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo-check/workflow.yml
-specify workflow add multi-repo-bootstrap --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo-bootstrap/workflow.yml
+specify workflow step add multirepo-implement --from \
+  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v1.0.0/step-multirepo-implement-v1.0.0.zip
+specify workflow add multirepo --from \
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multirepo/workflow.yml
+specify workflow add multirepo-check --from \
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multirepo-check/workflow.yml
+specify workflow add multirepo-bootstrap --from \
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multirepo-bootstrap/workflow.yml
 ```
 
 (The step install asks an interactive trust confirmation before downloading —
@@ -96,10 +96,10 @@ default-deny; answer `yes`.)
 
 ```sh
 specify extension add <clone-dir> --dev
-specify workflow step add multi-repo-implement --dev <clone-dir>/step/multi-repo-implement
-specify workflow add <clone-dir>/workflow/multi-repo --dev
-specify workflow add <clone-dir>/workflow/multi-repo-check --dev
-specify workflow add <clone-dir>/workflow/multi-repo-bootstrap --dev
+specify workflow step add multirepo-implement --dev <clone-dir>/step/multirepo-implement
+specify workflow add <clone-dir>/workflow/multirepo --dev
+specify workflow add <clone-dir>/workflow/multirepo-check --dev
+specify workflow add <clone-dir>/workflow/multirepo-bootstrap --dev
 ```
 
 ### Upgrading an existing workspace
@@ -116,7 +116,7 @@ bundles are regenerated per dispatch, so there is nothing to migrate.
 ./install.sh member  /path/to/member-a --release v1.0.0
 ./install.sh member  /path/to/member-b --release v1.0.0
 
-specify workflow run multi-repo-check   # verify: every member should report ready
+specify workflow run multirepo-check   # verify: every member should report ready
 ```
 
 Read the target version's entry in the [CHANGELOG](CHANGELOG.md) first —
@@ -145,10 +145,10 @@ plain re-add fails on an existing installation):
 ```sh
 # central
 specify extension add multirepo --from <ext-zip-url> --force
-specify workflow step add multi-repo-implement --from <step-zip-url> --force
-specify workflow add multi-repo --from <workflow-url>
-specify workflow add multi-repo-check --from <check-workflow-url>
-specify workflow add multi-repo-bootstrap --from <bootstrap-workflow-url>
+specify workflow step add multirepo-implement --from <step-zip-url> --force
+specify workflow add multirepo --from <workflow-url>
+specify workflow add multirepo-check --from <check-workflow-url>
+specify workflow add multirepo-bootstrap --from <bootstrap-workflow-url>
 # each member (plus the AGENTS.md governance section, via install.sh member)
 specify extension add multirepo --from <ext-zip-url> --force
 ```
@@ -257,7 +257,7 @@ members:
     domain: messaging                  # consumes events; never calls back
 ```
 
-`specify workflow run multi-repo-check` reports each member's `domain` and
+`specify workflow run multirepo-check` reports each member's `domain` and
 `communicates_with`, plus a `topology` Mermaid diagram — one subgraph per
 domain, thick arrows for `depends_on` (dependency → dependent, in dispatch
 order), dotted arrows for communication (`<-.->` when both sides list each
@@ -291,9 +291,9 @@ declared, a new teammate only clones the central repository:
 
 ```sh
 git clone git@github.com:acme/platform-specs.git && cd platform-specs
-specify workflow run multi-repo-bootstrap -i dry_run=true   # preview
-specify workflow run multi-repo-bootstrap                   # clone the members
-specify workflow run multi-repo-check                       # every member ready?
+specify workflow run multirepo-bootstrap -i dry_run=true   # preview
+specify workflow run multirepo-bootstrap                   # clone the members
+specify workflow run multirepo-check                       # every member ready?
 ```
 
 — or just asks the agent to configure the workspace
@@ -316,7 +316,7 @@ the bootstrap, and points out what is still missing. The bootstrap:
 `/speckit.multirepo.workspace` fills `url` for you: scaffolding and audit
 read each member's `origin` remote — only when the member path is the top
 of its own git repository, never for mono-repo subdirectories — and
-`multi-repo-check` reports it as `suggested_url` for members without `url`.
+`multirepo-check` reports it as `suggested_url` for members without `url`.
 
 > **Naming tip**: member ids may be full repository names (e.g.
 > `app-lambda-integracao`) — the task file then defaults to
@@ -324,11 +324,11 @@ of its own git repository, never for mono-repo subdirectories — and
 > self-describing. With several repos of the same type, repo-named ids beat
 > generic ones (`lambda`, `lambda-2`).
 
-## The workflow step — `multi-repo-implement`
+## The workflow step — `multirepo-implement`
 
 ```yaml
 - id: implement
-  type: multi-repo-implement
+  type: multirepo-implement
   feature: "specs/001-my-feature"   # default: active feature
   repos: [s3, lambda]               # default: members with a tasks file
   command: speckit.multirepo.implement
@@ -407,7 +407,7 @@ A member that fails verification is `failed` like a failed dispatch:
 it. With `skip_completed`, a fully checked-off task file is no longer taken
 at its word: its checks run first, and the agent is re-dispatched (with
 feedback) if they fail. The run's summary lands in
-`<feature>/verification/report.md`, which the `multi-repo` workflow's
+`<feature>/verification/report.md`, which the `multirepo` workflow's
 review gate displays.
 
 **Dispatching subsets — `ready: false`.** A task file starting with YAML
@@ -522,10 +522,10 @@ always receives the current rules.
 /speckit-multirepo-orchestrate specs/001-my-feature        # or: … --auto
 
 # or drive the workflow from the terminal (interactive gates)
-specify workflow run multi-repo -i feature=specs/001-my-feature
+specify workflow run multirepo -i feature=specs/001-my-feature
 
 # or fully non-interactive (CI): pre-approve the gates via inputs
-specify workflow run multi-repo \
+specify workflow run multirepo \
   -i feature=specs/001-my-feature -i confirm=approve -i review=approve --json
 
 # a member failed? fix it, then:
@@ -549,11 +549,11 @@ active feature) and `--auto` for a non-interactive run.
 1. **Precondition** — the feature must already have `tasks/<member>.md`
    files (from `/speckit.multirepo.tasks`); otherwise it stops and says so.
    It never generates spec, plan, or tasks.
-2. **Pre-flight** — `specify workflow run multi-repo-check --json`; any
+2. **Pre-flight** — `specify workflow run multirepo-check --json`; any
    participant in `no-dispatch` / `no-integration` / `unknown-integration` /
    `constitution-missing` is reported with its fix and nothing is
    dispatched.
-3. **Dispatch** — `specify workflow run multi-repo -i feature=<dir>` in the
+3. **Dispatch** — `specify workflow run multirepo -i feature=<dir>` in the
    background, polling its output (a dispatch may last up to
    `dispatch_timeout` per member). The `confirm` and `review` gates are
    asked in the chat (`workflow resume <run-id> -i review=…`); `--auto`
@@ -574,8 +574,8 @@ active feature) and `--auto` for a non-interactive run.
 **Naming convention.** The extension id is `multirepo` (one word), so
 every command is `speckit.multirepo.<name>` — skill
 `speckit-multirepo-<name>` (Spec Kit requires an extension's command names
-to be `speckit.<extension-id>.<command>`). The workflows (`multi-repo`, `multi-repo-check`,
-`multi-repo-bootstrap`) and the step type (`multi-repo-implement`) keep their
+to be `speckit.<extension-id>.<command>`). The workflows (`multirepo`, `multirepo-check`,
+`multirepo-bootstrap`) and the step type (`multirepo-implement`) keep their
 names.
 
 ## Help
@@ -591,7 +591,7 @@ read-only: it explains and recommends, never dispatches or edits.
 
 Two tools keep the workspace healthy as the team grows:
 
-**`specify workflow run multi-repo-check`** — a read-only doctor for the
+**`specify workflow run multirepo-check`** — a read-only doctor for the
 workspace. It runs the orchestrator step in `dry_run` mode: every declared
 member is classified (`ready` / `not-cloned` / `not-initialized` /
 `no-integration` / `unknown-integration` / `no-dispatch` /
@@ -601,7 +601,7 @@ waves are listed — nothing is dispatched. Use `--json` for a
 machine-readable report:
 
 ```sh
-run_id=$(specify workflow run multi-repo-check --json | jq -r .run_id)
+run_id=$(specify workflow run multirepo-check --json | jq -r .run_id)
 jq '.step_results.check.output.members' .specify/workflows/runs/$run_id/state.json
 jq -r '.step_results.check.output.topology' .specify/workflows/runs/$run_id/state.json   # Mermaid diagram
 ```
@@ -616,14 +616,14 @@ participants are recorded as `status: missing` (with the reason) and the
 ready members are dispatched:
 
 ```sh
-specify workflow run multi-repo -i missing=skip
+specify workflow run multirepo -i missing=skip
 ```
 
 Configuration mistakes (no integration, unknown integration, missing
 constitution file) still abort in both modes — `skip` covers local absence,
 not manifest errors.
 
-**`specify workflow run multi-repo-bootstrap`** — clones the members
+**`specify workflow run multirepo-bootstrap`** — clones the members
 missing locally from their manifest `url` (see
 [Bootstrapping a fresh checkout](#bootstrapping-a-fresh-checkout--url));
 `-i dry_run=true` previews. It runs the orchestrator step in `bootstrap`
@@ -644,7 +644,7 @@ with three modes:
   entries and their dependencies are never modified, except that a missing
   `url` is filled from the member's `origin` remote after confirmation
 - *Bootstrap* (`bootstrap`, or "configure the workspace" after cloning only
-  the central repo): previews and runs `multi-repo-bootstrap`, then reports
+  the central repo): previews and runs `multirepo-bootstrap`, then reports
   members still missing a `url` or not initialized
 
 **`/speckit.multirepo.domain`** — agent command for the central repo that
@@ -826,9 +826,9 @@ The test suite needs the `specify_cli` package importable — run it from a
 cloned inside it, or from any virtualenv that has `specify-cli` installed:
 
 ```sh
-# from a spec-kit checkout with this repo at ./multi-repo (or adjust the path)
+# from a spec-kit checkout with this repo at ./multirepo (or adjust the path)
 uv sync --extra test
-.venv/bin/pytest multi-repo/tests
+.venv/bin/pytest multirepo/tests
 
 # from this repository, using that venv
 /path/to/spec-kit/.venv/bin/pytest tests
@@ -843,9 +843,9 @@ real CLI and runs/resumes a workflow against a fake agent executable
 ## Releasing
 
 ```sh
-./make-release.sh            # builds dist/step-multi-repo-implement-vX.Y.Z.zip
+./make-release.sh            # builds dist/step-multirepo-implement-vX.Y.Z.zip
 git tag vX.Y.Z && git push origin vX.Y.Z
-gh release create vX.Y.Z dist/step-multi-repo-implement-vX.Y.Z.zip --title vX.Y.Z
+gh release create vX.Y.Z dist/step-multirepo-implement-vX.Y.Z.zip --title vX.Y.Z
 ```
 
 The extension installs straight from the tag archive; the custom step ships

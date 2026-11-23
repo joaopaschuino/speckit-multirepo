@@ -10,7 +10,7 @@ directory and the central feature directory exported through
 Configuration (all fields optional)::
 
     - id: implement
-      type: multi-repo-implement
+      type: multirepo-implement
       feature: "specs/001-my-feature"   # default: active feature
       repos: [s3, lambda]               # default: members with a tasks file
       command: speckit.multirepo.implement
@@ -53,7 +53,7 @@ no-integration / unknown-integration / no-dispatch / constitution-missing),
 participation and waves are computed, and nothing is dispatched. Each member
 entry also carries its ``domain`` and ``communicates_with`` when declared, and
 ``topology`` holds a Mermaid flowchart of the whole workspace (domains,
-dependency and communication edges). The ``multi-repo-check`` workflow wraps
+dependency and communication edges). The ``multirepo-check`` workflow wraps
 this mode as a workspace doctor.
 
 ``bootstrap: true`` turns the step into the workspace bootstrap: every
@@ -62,7 +62,7 @@ cloned (``git clone <url> <path>``), members already present are skipped,
 absent members without a ``url`` are reported, and paths of cloned members
 inside the central repository are added to its ``.gitignore``. Combined with
 ``dry_run: true`` it only reports what it would clone. No feature directory
-is needed and nothing is dispatched. The ``multi-repo-bootstrap`` workflow
+is needed and nothing is dispatched. The ``multirepo-bootstrap`` workflow
 wraps this mode.
 
 ``missing: skip`` supports teams where each member of the team has cloned
@@ -185,7 +185,7 @@ _CONFIG_ERROR_STATUSES = (
 class MultiRepoImplementStep(StepBase):
     """Dispatch a centrally-specified feature to workspace members."""
 
-    type_key = "multi-repo-implement"
+    type_key = "multirepo-implement"
 
     # -- validation ---------------------------------------------------------
 
@@ -723,7 +723,7 @@ class MultiRepoImplementStep(StepBase):
                 if member.url:
                     entry["reason"] += (
                         f"; clone it from {member.url} with 'specify workflow "
-                        "run multi-repo-bootstrap'"
+                        "run multirepo-bootstrap'"
                     )
                 report[member.id] = entry
                 continue
@@ -774,7 +774,7 @@ class MultiRepoImplementStep(StepBase):
                 entry["reason"] = f"unknown integration {key!r}"
                 report[member.id] = entry
                 continue
-            if impl.build_exec_args("__speckit_multi_repo_probe__") is None:
+            if impl.build_exec_args("__speckit_multirepo_probe__") is None:
                 entry["status"] = "no-dispatch"
                 entry["reason"] = (
                     f"integration {key!r} does not support non-interactive "
@@ -1199,7 +1199,7 @@ def write_governance_bundle(
     lines = [
         f"# Governance bundle — {member.id}",
         "",
-        "Assembled by the multi-repo orchestrator at dispatch time. Every layer",
+        "Assembled by the multirepo orchestrator at dispatch time. Every layer",
         "below applies to this member's implementation; when layers conflict, the",
         "most restrictive rule wins (each layer narrows the one above, never",
         "loosens it).",

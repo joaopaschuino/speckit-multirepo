@@ -1,4 +1,4 @@
-"""Objective verification for the multi-repo orchestrator.
+"""Objective verification for the multirepo orchestrator.
 
 A member task file may carry a ``## Verification`` section listing POSIX
 commands the orchestrator runs in the member repository after the member's
@@ -321,7 +321,7 @@ def write_feedback(
     lines = [
         f"# Verification feedback — {member_id}",
         "",
-        "The multi-repo orchestrator ran the objective checks from the",
+        "The multirepo orchestrator ran the objective checks from the",
         f"`## Verification` section of `{tasks_file}` in this repository after",
         f"the previous attempt ({verification['label']}), and some failed.",
         "Fix the implementation so every check exits with its expected code.",

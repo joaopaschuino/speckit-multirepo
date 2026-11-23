@@ -74,10 +74,10 @@ def test_fresh_install_then_upgrade(tmp_path):
     # -- fresh install ------------------------------------------------------
     result = run_install("central", central)
     assert result.returncode == 0, result.stderr
-    assert (central / ".specify" / "workflows" / "steps" / "multi-repo-implement" / "__init__.py").is_file()
-    assert (central / ".specify" / "workflows" / "multi-repo" / "workflow.yml").is_file()
-    assert (central / ".specify" / "workflows" / "multi-repo-check" / "workflow.yml").is_file()
-    assert (central / ".specify" / "workflows" / "multi-repo-bootstrap" / "workflow.yml").is_file()
+    assert (central / ".specify" / "workflows" / "steps" / "multirepo-implement" / "__init__.py").is_file()
+    assert (central / ".specify" / "workflows" / "multirepo" / "workflow.yml").is_file()
+    assert (central / ".specify" / "workflows" / "multirepo-check" / "workflow.yml").is_file()
+    assert (central / ".specify" / "workflows" / "multirepo-bootstrap" / "workflow.yml").is_file()
 
     result = run_install("member", member)
     assert result.returncode == 0, result.stderr

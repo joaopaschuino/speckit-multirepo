@@ -17,7 +17,7 @@ Accepted forms:
 
 ## Purpose
 
-This repository is the **central specs repository** of a multi-repo workspace whose members already contain code but no specs (a brownfield workspace). This command reads that code and writes a **baseline** per member — what the member does *today* — so the first real feature starts from documented ground instead of from memory:
+This repository is the **central specs repository** of a multirepo workspace whose members already contain code but no specs (a brownfield workspace). This command reads that code and writes a **baseline** per member — what the member does *today* — so the first real feature starts from documented ground instead of from memory:
 
 | Output | Path (central repository) | Written by |
 |--------|---------------------------|------------|
@@ -41,7 +41,7 @@ Rules that apply in every mode:
 
 Read `.specify/workspace.yml` from the repo root. If it is missing or invalid, **STOP** with: `No valid workspace manifest at .specify/workspace.yml. Run /speckit.multirepo.workspace first (central specs repository).`
 
-For each member note `id`, `path` (relative to this repo root), `constitution`, `domain`, and `communicates_with`. Check which member paths exist on disk; members that are not cloned cannot be scanned — list them as *unscanned* in the report (suggest `specify workflow run multi-repo-bootstrap` when they have a `url`). Member ids given in `$ARGUMENTS` must be declared in the manifest; **STOP** on an unknown id with the list of known ids.
+For each member note `id`, `path` (relative to this repo root), `constitution`, `domain`, and `communicates_with`. Check which member paths exist on disk; members that are not cloned cannot be scanned — list them as *unscanned* in the report (suggest `specify workflow run multirepo-bootstrap` when they have a `url`). Member ids given in `$ARGUMENTS` must be declared in the manifest; **STOP** on an unknown id with the list of known ids.
 
 If `.specify/memory/domain.md` exists (written by `/speckit.multirepo.domain`), read it — it becomes spec context:
 

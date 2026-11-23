@@ -1,6 +1,6 @@
 schema_version: "1.0"
 workflow:
-  id: "multi-repo-check"
+  id: "multirepo-check"
   name: "Multi-Repo Workspace Check"
   version: "1.0.0"
   author: "Joao Victor"
@@ -17,6 +17,6 @@ inputs:
 
 steps:
   - id: check
-    type: multi-repo-implement
+    type: multirepo-implement
     dry_run: true
     feature: "{{ inputs.feature }}"

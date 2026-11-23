@@ -1,9 +1,9 @@
-"""Shared fixtures for the multi-repo extension test suite.
+"""Shared fixtures for the multirepo extension test suite.
 
 Run with the spec-kit checkout's virtualenv::
 
     uv sync --extra test
-    .venv/bin/python -m pytest multi-repo/tests
+    .venv/bin/python -m pytest multirepo/tests
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-STEP_DIR = PACKAGE_ROOT / "step" / "multi-repo-implement"
+STEP_DIR = PACKAGE_ROOT / "step" / "multirepo-implement"
 
 
 def load_step_package():
@@ -27,7 +27,7 @@ def load_step_package():
     module with submodule search locations, so the relative ``.workspace``
     import resolves.
     """
-    module_name = "multi_repo_implement_step_under_test"
+    module_name = "multirepo_implement_step_under_test"
     if module_name in sys.modules:
         return sys.modules[module_name]
     spec = importlib.util.spec_from_file_location(

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotently maintain the multi-repo governance section in a repository's
+# Idempotently maintain the multirepo governance section in a repository's
 # AGENTS.md. The section is the persistent channel that makes every agent
 # session in a member repository aware of the workspace constitution layers —
 # including free-form edits made after a dispatch, which bypass the
@@ -25,7 +25,7 @@ cat > "$section" <<'EOF'
 <!-- SPECKIT-MULTI-REPO:GOVERNANCE START -->
 ## Multi-repo workspace governance
 
-This repository is a member of a Spec Kit multi-repo workspace. When working
+This repository is a member of a Spec Kit multirepo workspace. When working
 on a feature dispatched from the central specs repository (the directory in
 `SPECIFY_FEATURE_DIRECTORY`, or `/speckit.multirepo.implement`), every rule
 in the workspace's constitution layers applies — including to later edits

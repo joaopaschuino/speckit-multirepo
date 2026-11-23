@@ -25,7 +25,7 @@ from typing import Any
 
 from .workspace import Member, Workspace
 
-GITIGNORE_HEADER = "# multi-repo: member repositories cloned by the bootstrap"
+GITIGNORE_HEADER = "# multirepo: member repositories cloned by the bootstrap"
 
 
 class BootstrapError(RuntimeError):

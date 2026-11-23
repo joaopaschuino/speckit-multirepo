@@ -35,12 +35,12 @@ provides:
       description: "Run implementation and validation of an already-split feature (everything after tasks) across the members — pre-flight check, dispatch with relayed gates or --auto, objective verification, and an executive verification/report.html (run in the central specs repository, router side)"
     - name: speckit.multirepo.help
       file: commands/speckit.multirepo.help.md
-      description: "Explain the Spec Kit and multi-repo flows and recommend the next command for this repository's role and feature state (run in any workspace repository)"
+      description: "Explain the Spec Kit and multirepo flows and recommend the next command for this repository's role and feature state (run in any workspace repository)"
 
   config:
     - name: "multirepo-config.yml"
       template: "config-template.yml"
-      description: "Optional multi-repo settings (member task file default, feature persistence)"
+      description: "Optional multirepo settings (member task file default, feature persistence)"
       required: false
 
 hooks:

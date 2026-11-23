@@ -6,7 +6,7 @@ scripts:
   py: scripts/python/check_prerequisites.py --json --paths-only
 ---
 
-> **Central repository command (router).** This command runs in the **central specs repository** and drives the `multi-repo` workflow that dispatches each member's agent and verifies its work. It is **not** `speckit.multirepo.implement`, which is the **worker-side** command that runs *inside a member repository* (usually dispatched headlessly by this workflow). Never run this command in a member repository.
+> **Central repository command (router).** This command runs in the **central specs repository** and drives the `multirepo` workflow that dispatches each member's agent and verifies its work. It is **not** `speckit.multirepo.implement`, which is the **worker-side** command that runs *inside a member repository* (usually dispatched headlessly by this workflow). Never run this command in a member repository.
 
 ## User Input
 
@@ -18,12 +18,12 @@ Accepted forms (tokens in any order):
 
 - `<feature-dir>` — the feature to orchestrate, a path under `specs/` (relative to the repo root, e.g. `specs/001-orders`, or absolute). Default: the active feature.
 - `--auto` — non-interactive mode: the workflow's gates (`confirm`, `review`) are pre-approved and nothing is asked; the final report is still written and shown.
-- `--report-only` — dispatch nothing: rebuild `verification/report.html` from this feature's **latest** `multi-repo` run — the one whose results are in the current `verification/report.md` (each run overwrites it, so older runs cannot be rendered). Do Steps 1, 5 and 6 only — use it after a manual `specify workflow resume`, which refreshes `report.md` but not the HTML.
+- `--report-only` — dispatch nothing: rebuild `verification/report.html` from this feature's **latest** `multirepo` run — the one whose results are in the current `verification/report.md` (each run overwrites it, so older runs cannot be rendered). Do Steps 1, 5 and 6 only — use it after a manual `specify workflow resume`, which refreshes `report.md` but not the HTML.
 - Any other text is a note from the user (for example "only report, the review is mine"); honor it when it does not contradict the rules below.
 
 ## Purpose
 
-This is the chat entry point for **everything after `tasks`**: implementation and validation of a feature whose tasks were already split per member by `speckit.multirepo.tasks`. It wraps the terminal workflows — `multi-repo-check` (pre-flight) and `multi-repo` (dispatch + verification) — so the user does not have to drive them by hand, relays the workflow's gates to the user, and finishes with an executive HTML summary for human review.
+This is the chat entry point for **everything after `tasks`**: implementation and validation of a feature whose tasks were already split per member by `speckit.multirepo.tasks`. It wraps the terminal workflows — `multirepo-check` (pre-flight) and `multirepo` (dispatch + verification) — so the user does not have to drive them by hand, relays the workflow's gates to the user, and finishes with an executive HTML summary for human review.
 
 Scope rules that apply in every mode:
 
@@ -36,7 +36,7 @@ Scope rules that apply in every mode:
 1. Confirm this is the central repository: `.specify/workspace.yml` must exist. If it does not, **STOP** with: `No workspace manifest at .specify/workspace.yml — run this command in the central specs repository (see /speckit.multirepo.workspace).`
 2. If `$ARGUMENTS` names a feature directory, use it. Otherwise run `{SCRIPT}` from the repo root and take FEATURE_DIR from its JSON output. If neither yields a directory, **STOP** and ask the user for the feature path (with `--auto`: stop with the error).
 3. Let FEATURE_DIR be the absolute path and FEATURE_REL its path relative to the repo root (POSIX separators) — the workflow input uses FEATURE_REL. FEATURE_DIR must exist.
-4. With `--report-only`, take as `<run_id>` the run under `.specify/workflows/runs/` with the greatest `updated_at` among those whose `state.json` has `workflow_id` `multi-repo` and `.step_results.implement.output.feature` equal to FEATURE_DIR (the step records the resolved feature there, also when the run used the active feature), skipping dry runs (`.step_results.implement.output.dry_run` true — previews dispatch nothing and have no results). None found → **STOP**: `No multi-repo run found for <FEATURE_REL> — run this command without --report-only.` Otherwise go straight to Step 5 and Step 6.
+4. With `--report-only`, take as `<run_id>` the run under `.specify/workflows/runs/` with the greatest `updated_at` among those whose `state.json` has `workflow_id` `multirepo` and `.step_results.implement.output.feature` equal to FEATURE_DIR (the step records the resolved feature there, also when the run used the active feature), skipping dry runs (`.step_results.implement.output.dry_run` true — previews dispatch nothing and have no results). None found → **STOP**: `No multirepo run found for <FEATURE_REL> — run this command without --report-only.` Otherwise go straight to Step 5 and Step 6.
 
 ## Step 2 — Precondition: per-member task files exist
 
@@ -51,12 +51,12 @@ Run speckit.multirepo.tasks in this central repository first (after speckit.task
 
 List the members that will participate (those with a task file), the members without one (not participating), and — for each participating file — whether it has a `## Verification` section. A participating member with no verification section will finish as `completed`, never `verified`: warn the user (it is not an error).
 
-## Step 3 — Pre-flight: `multi-repo-check`
+## Step 3 — Pre-flight: `multirepo-check`
 
 Run from the repo root:
 
 ```sh
-specify workflow run multi-repo-check -i feature=<FEATURE_REL> --json
+specify workflow run multirepo-check -i feature=<FEATURE_REL> --json
 ```
 
 The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's output is persisted in the run state: read `.specify/workflows/runs/<run_id>/state.json` and take `.step_results.check.output` (`members` — one entry per declared member, keyed by `repo`, with `status`, `reason`, `participant` — plus `waves`, `not_ready`, `missing`). Consider only the members the implementation would dispatch: participating (`participant: true`) and not held (no `ready: false`). A held member is excluded by the workflow before its configuration or local presence is checked, so its status never blocks the run — it is only reported (see `not_ready` below).
@@ -66,13 +66,13 @@ The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's 
   - `no-dispatch` → the member's integration has no headless CLI dispatch; pick an integration that supports it;
   - `constitution-missing` → the `constitution` file declared in the manifest does not exist in the central repository.
   Then **STOP**.
-- **Locally absent members** (`not-cloned`, `not-initialized`) → the default `missing: error` would abort the run. Report them with the fix for each: `not-cloned` → `specify workflow run multi-repo-bootstrap` (clones members with a manifest `url`); `not-initialized` → the checkout exists but is not a Spec Kit project, so bootstrap does not touch it — run `specify init --here --integration <agent>` in that member, then install the extension there (`install.sh member <path>`). Interactively, offer to continue with `-i missing=skip` (only the ready members are dispatched) and wait for the answer; with `--auto`, **STOP** — never skip members silently.
+- **Locally absent members** (`not-cloned`, `not-initialized`) → the default `missing: error` would abort the run. Report them with the fix for each: `not-cloned` → `specify workflow run multirepo-bootstrap` (clones members with a manifest `url`); `not-initialized` → the checkout exists but is not a Spec Kit project, so bootstrap does not touch it — run `specify init --here --integration <agent>` in that member, then install the extension there (`install.sh member <path>`). Interactively, offer to continue with `-i missing=skip` (only the ready members are dispatched) and wait for the answer; with `--auto`, **STOP** — never skip members silently.
 - `not_ready` members (held by `ready: false`, with `held_reason`) are reported and are not an error — whatever their status, they are neither configuration errors nor locally absent for this run.
 - Show the dispatch plan: the waves (in order) and the participating members of each.
 
 If the check itself fails (non-zero exit, unparseable JSON), report its error and **STOP**.
 
-## Step 4 — Run `multi-repo` and poll its output
+## Step 4 — Run `multirepo` and poll its output
 
 Dispatches are long: each member may take up to `dispatch_timeout` seconds (default 3600) per dispatch, plus every verification command, times `1 + verify_retries` attempts. Never block on the command with a short tool timeout and never assume a quiet terminal means a hung run.
 
@@ -81,7 +81,7 @@ Dispatches are long: each member may take up to `dispatch_timeout` seconds (defa
 
    ```sh
    mkdir -p <FEATURE_DIR>/verification
-   specify workflow run multi-repo -i feature=<FEATURE_REL> -i confirm=approve [-i review=approve] [-i …] --json \
+   specify workflow run multirepo -i feature=<FEATURE_REL> -i confirm=approve [-i review=approve] [-i …] --json \
      < /dev/null > <FEATURE_DIR>/verification/orchestrate.json 2> <FEATURE_DIR>/verification/orchestrate.log &
    ```
 
@@ -163,5 +163,5 @@ Answer in the user's language, briefly:
 - Next step, by outcome:
   - all verified, run `completed` → review the members' diffs and open their PRs (each member's change is a pure implementation diff);
   - a member `failed` → fix it in that member repository (the report's *Requires attention* section and `verification/<member>.feedback.md` say what broke), then run this command again: the new run skips members whose task files are fully checked off and whose checks still pass (`skip_completed`), and rewrites `report.html`. A manual `specify workflow resume <run_id>` refreshes only `report.md`, not the HTML — after one, run this command with `--report-only` to rebuild `report.html` from that run without dispatching again;
-  - `missing` / `not-ready` members → `multi-repo-bootstrap`, or remove `ready: false` and run again;
+  - `missing` / `not-ready` members → `multirepo-bootstrap`, or remove `ready: false` and run again;
   - review rejected (`aborted`) → the dispatched code stays in the members; nothing was merged.

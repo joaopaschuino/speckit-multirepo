@@ -122,10 +122,10 @@ def read_run_state(central: Path) -> dict:
 def install_components():
     """Install the step and the workflows through the real CLI."""
     result = invoke_specify(
-        ["workflow", "step", "add", "multi-repo-implement", "--dev", str(PACKAGE_ROOT / "step" / "multi-repo-implement")]
+        ["workflow", "step", "add", "multirepo-implement", "--dev", str(PACKAGE_ROOT / "step" / "multirepo-implement")]
     )
     assert result.exit_code == 0, result.output
-    for name in ("multi-repo", "multi-repo-check", "multi-repo-bootstrap"):
+    for name in ("multirepo", "multirepo-check", "multirepo-bootstrap"):
         result = invoke_specify(
             ["workflow", "add", str(PACKAGE_ROOT / "workflow" / name), "--dev"]
         )
@@ -142,7 +142,7 @@ def test_install_run_and_resume(central):
     (lambda_repo / "fail-agent").write_text("", encoding="utf-8")
     result = invoke_specify(
         [
-            "workflow", "run", "multi-repo",
+            "workflow", "run", "multirepo",
             "-i", "confirm=approve",
             "-i", "review=approve",
             "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -196,13 +196,13 @@ def test_install_run_and_resume(central):
         assert "governance/lambda.md" in lambda_call["args"]
 
 
-def test_multi_repo_check_reports_without_dispatch(central):
+def test_multirepo_check_reports_without_dispatch(central):
     """The check workflow reports readiness and waves, dispatching nothing."""
     root, feature, _lambda_repo = central
     install_components()
 
     result = invoke_specify(
-        ["workflow", "run", "multi-repo-check", "-i", f"feature={feature.relative_to(root).as_posix()}"]
+        ["workflow", "run", "multirepo-check", "-i", f"feature={feature.relative_to(root).as_posix()}"]
     )
     assert result.exit_code == 0, result.output
 
@@ -235,7 +235,7 @@ def test_missing_skip_dispatches_ready_members(central):
 
     result = invoke_specify(
         [
-            "workflow", "run", "multi-repo",
+            "workflow", "run", "multirepo",
             "-i", "confirm=approve",
             "-i", "review=approve",
             "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -300,9 +300,9 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     assert "speckit.multirepo.tasks" in hooks
 
 
-def run_multi_repo(root, feature, *extra):
+def run_multirepo(root, feature, *extra):
     argv = [
-        "workflow", "run", "multi-repo",
+        "workflow", "run", "multirepo",
         "-i", "confirm=approve",
         "-i", "review=approve",
         "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -336,7 +336,7 @@ def test_verification_retry_status_and_review_gate(central):
     )
     (lambda_repo / "fix-on-feedback").write_text("", encoding="utf-8")
 
-    result = run_multi_repo(root, feature, "verify_retries=1")
+    result = run_multirepo(root, feature, "verify_retries=1")
     assert result.exit_code == 0, result.output
 
     log = read_agent_log(Path(os.environ["FAKE_AGENT_LOG"]))
@@ -376,7 +376,7 @@ def test_verification_failure_fails_run_without_retries(central):
         "- [ ] s3 task\n\n## Verification\n\n- test: `exit 1`\n", encoding="utf-8"
     )
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 1, result.output
 
     assert len(read_agent_log(Path(os.environ["FAKE_AGENT_LOG"]))) == 1  # default: no retry
@@ -396,7 +396,7 @@ def test_sequential_dispatch_timeout_kills_hung_agent(central):
     (root / "repo-s3" / "hang-agent").write_text("", encoding="utf-8")
 
     started = time.monotonic()
-    result = run_multi_repo(root, feature, "dispatch_timeout=2")
+    result = run_multirepo(root, feature, "dispatch_timeout=2")
     assert time.monotonic() - started < 25
     assert result.exit_code == 1, result.output
 
@@ -433,7 +433,7 @@ def test_contract_check_member_runs_after_producer(central):
         encoding="utf-8",
     )
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 0, result.output
 
     output = read_run_state(root)["step_results"]["implement"]["output"]
@@ -477,7 +477,7 @@ def test_monorepo_members_are_subdirectories(tmp_path, fake_agent, monkeypatch):
     monkeypatch.chdir(root)
     install_components()
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 0, result.output
 
     output = read_run_state(root)["step_results"]["implement"]["output"]
@@ -492,7 +492,7 @@ def test_monorepo_members_are_subdirectories(tmp_path, fake_agent, monkeypatch):
     assert all(r["feature"] == str(feature) for r in log)
 
 
-def test_multi_repo_bootstrap_clones_missing_members(central, tmp_path):
+def test_multirepo_bootstrap_clones_missing_members(central, tmp_path):
     """The bootstrap workflow clones an absent member from its manifest url."""
     import subprocess
 
@@ -514,7 +514,7 @@ def test_multi_repo_bootstrap_clones_missing_members(central, tmp_path):
     )
     install_components()
 
-    result = invoke_specify(["workflow", "run", "multi-repo-bootstrap"])
+    result = invoke_specify(["workflow", "run", "multirepo-bootstrap"])
     assert result.exit_code == 0, result.output
 
     assert (root / "members" / "glue" / "README.md").is_file()

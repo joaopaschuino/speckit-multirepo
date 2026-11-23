@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release. Requires Spec Kit ≥ 1.1.0. Extension id `multirepo`: every
 agent command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`);
-the workflows are `multi-repo`, `multi-repo-check` and `multi-repo-bootstrap`,
-and the custom step type is `multi-repo-implement`.
+the workflows are `multirepo`, `multirepo-check` and `multirepo-bootstrap`,
+and the custom step type is `multirepo-implement`.
 
 ### Added
 
@@ -18,7 +18,7 @@ and the custom step type is `multi-repo-implement`.
   plus member repositories, with `depends_on` ordering, optional per-member
   `constitution`, `url` (bootstrap remote) and domain topology; mono-repo
   layouts supported
-- **`multi-repo-implement` workflow step**: dispatches each member in
+- **`multirepo-implement` workflow step**: dispatches each member in
   dependency waves (Kahn), with `dispatch_timeout`, `missing`
   (`error` | `skip`), `skip_completed`, `stop_on_failure` and `dry_run`
 - **Objective verification (router / worker)**: member task files end with a
@@ -31,17 +31,17 @@ and the custom step type is `multi-repo-implement`.
   constitution layers combined into `<feature>/governance/<member>.md` per
   dispatch, with fail-fast validation; `install.sh member` keeps a
   governance section in the member's `AGENTS.md`
-- **Workflows**: `multi-repo` (confirm gate → dispatch + verification →
-  review gate), `multi-repo-check` (readiness and topology dry run) and
-  `multi-repo-bootstrap` (clone missing members from their `url`)
+- **Workflows**: `multirepo` (confirm gate → dispatch + verification →
+  review gate), `multirepo-check` (readiness and topology dry run) and
+  `multirepo-bootstrap` (clone missing members from their `url`)
 - **Agent commands**:
   - `speckit.multirepo.orchestrate` (central, router side): implementation +
     validation of a feature already split into `tasks/<member>.md` —
     everything after `tasks` — from the agent chat. Takes the feature
     directory (default: the active feature), `--auto` (pre-approves the
     gates) and `--report-only`; aborts when the per-member task files are
-    missing or `multi-repo-check` reports `no-dispatch` / `no-integration` /
-    `unknown-integration` / `constitution-missing`; runs `multi-repo` in the
+    missing or `multirepo-check` reports `no-dispatch` / `no-integration` /
+    `unknown-integration` / `constitution-missing`; runs `multirepo` in the
     background, relays its gates, and writes
     `<feature>/verification/report.html` — a standalone executive summary
     (inline CSS, no dependencies): verified/total, per-member table,

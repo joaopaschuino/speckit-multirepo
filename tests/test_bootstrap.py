@@ -217,12 +217,12 @@ def test_step_bootstrap_mode(tmp_path, step_module):
     context = step_module.StepContext(project_root=str(central), inputs={})
     step = step_module.MultiRepoImplementStep()
 
-    preview = step.execute({"id": "b", "type": "multi-repo-implement", "bootstrap": True, "dry_run": True}, context)
+    preview = step.execute({"id": "b", "type": "multirepo-implement", "bootstrap": True, "dry_run": True}, context)
     assert preview.status == step_module.StepStatus.COMPLETED
     assert preview.output["dry_run"] is True
     assert not (tmp_path / "repo-s3").exists()
 
-    result = step.execute({"id": "b", "type": "multi-repo-implement", "bootstrap": True}, context)
+    result = step.execute({"id": "b", "type": "multirepo-implement", "bootstrap": True}, context)
     assert result.status == step_module.StepStatus.COMPLETED
     assert result.output["bootstrap"] is True
     assert result.output["cloned"] == ["s3"]
@@ -236,7 +236,7 @@ def test_step_bootstrap_failure(tmp_path, step_module):
         members=[{"id": "s3", "path": "../repo-s3", "url": str(tmp_path / "missing-remote")}],
     )
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "b", "type": "multi-repo-implement", "bootstrap": "{{ inputs.bootstrap }}"},
+        {"id": "b", "type": "multirepo-implement", "bootstrap": "{{ inputs.bootstrap }}"},
         step_module.StepContext(project_root=str(central), inputs={"bootstrap": "true"}),
     )
     assert result.status == step_module.StepStatus.FAILED
@@ -246,11 +246,11 @@ def test_step_bootstrap_failure(tmp_path, step_module):
 
 def test_step_validate_bootstrap(step_module):
     errors = step_module.MultiRepoImplementStep().validate(
-        {"id": "b", "type": "multi-repo-implement", "bootstrap": 3}
+        {"id": "b", "type": "multirepo-implement", "bootstrap": 3}
     )
     assert any("'bootstrap' must be" in e for e in errors)
     assert not step_module.MultiRepoImplementStep().validate(
-        {"id": "b", "type": "multi-repo-implement", "bootstrap": True}
+        {"id": "b", "type": "multirepo-implement", "bootstrap": True}
     )
 
 
@@ -268,7 +268,7 @@ def test_dry_run_reports_url_and_suggests_origin(tmp_path, step_module):
     )
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "c", "type": "multi-repo-implement", "dry_run": True, "repos": ["s3", "lambda", "glue"]},
+        {"id": "c", "type": "multirepo-implement", "dry_run": True, "repos": ["s3", "lambda", "glue"]},
         step_module.StepContext(project_root=str(central), inputs={}),
     )
 
@@ -278,7 +278,7 @@ def test_dry_run_reports_url_and_suggests_origin(tmp_path, step_module):
     assert members["lambda"]["url"] == "git@example.com:acme/lambda.git"
     assert "suggested_url" not in members["lambda"]
     assert members["glue"]["status"] == "not-cloned"
-    assert "multi-repo-bootstrap" in members["glue"]["reason"]
+    assert "multirepo-bootstrap" in members["glue"]["reason"]
 
 
 def test_clone_runs_without_a_terminal(tmp_path, workspace_module, bootstrap_module, monkeypatch):

@@ -1,5 +1,5 @@
 ---
-description: Explain the Spec Kit workflow and the multi-repo workspace flow, and recommend the next command for this repository's role and feature state
+description: Explain the Spec Kit workflow and the multirepo workspace flow, and recommend the next command for this repository's role and feature state
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -19,8 +19,8 @@ repository and feature state.
 
 ## Purpose
 
-This is the multi-repo extension's help command. It orients the user in the
-Spec Kit workflow and in the multi-repo workspace flow, answers "how does
+This is the multirepo extension's help command. It orients the user in the
+Spec Kit workflow and in the multirepo workspace flow, answers "how does
 this work" questions, and recommends the concrete next command. It is
 **read-only**: it explains and recommends — it never dispatches workflows,
 never edits feature files, never modifies the workspace manifest. It works
@@ -90,10 +90,10 @@ exist.
 | Central, agent chat | `speckit.multirepo.workspace [audit\|bootstrap]` | scaffolds or audits `.specify/workspace.yml`; `bootstrap` clones the missing members from their `url` |
 | Central, agent chat | `speckit.multirepo.domain [auto\|guided <member>]` | maps the domain topology (`domain`, `communicates_with`) from evidence in member repos, writes `.specify/memory/domain.md` |
 | Central, agent chat | `speckit.multirepo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/baseline/<member>/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
-| Central, agent chat | `speckit-multirepo-orchestrate [<feature-dir>] [--auto]` | entry point for implementation + validation after `tasks` (router side): requires `tasks/<member>.md`, runs `multi-repo-check` (aborts on configuration errors), runs `multi-repo` polling its output and relaying the gates in the chat (`--auto` pre-approves them), reports per member, writes `<feature>/verification/report.html`; never generates spec/plan/tasks |
-| Central, terminal | `specify workflow run multi-repo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
-| Central, terminal | `specify workflow run multi-repo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
-| Central, terminal | `specify workflow run multi-repo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
+| Central, agent chat | `speckit-multirepo-orchestrate [<feature-dir>] [--auto]` | entry point for implementation + validation after `tasks` (router side): requires `tasks/<member>.md`, runs `multirepo-check` (aborts on configuration errors), runs `multirepo` polling its output and relaying the gates in the chat (`--auto` pre-approves them), reports per member, writes `<feature>/verification/report.html`; never generates spec/plan/tasks |
+| Central, terminal | `specify workflow run multirepo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
+| Central, terminal | `specify workflow run multirepo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
+| Central, terminal | `specify workflow run multirepo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
 | Central, terminal | `specify workflow resume <run-id>` | re-runs a failed run; completed members are skipped |
 | Member, agent chat | `speckit.multirepo.implement` | implements this member's task slice (usually dispatched headlessly by the orchestrator, not typed) |
 
@@ -103,8 +103,8 @@ form present in this repository's agent command directory.
 
 **Naming convention.** The extension id is `multirepo` (one word): every
 command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`). The
-workflows (`multi-repo`, `multi-repo-check`, `multi-repo-bootstrap`) and the
-step type `multi-repo-implement` keep their names.
+workflows (`multirepo`, `multirepo-check`, `multirepo-bootstrap`) and the
+step type `multirepo-implement` keep their names.
 
 **The workspace model.** All feature state lives in the central repository
 (spec, plan, orchestration `tasks.md`, per-member task files, governance
@@ -133,18 +133,18 @@ conflicts resolve to the most restrictive rule.
   `specify workflow resume <run-id>` in the central; members whose task
   files are fully checked off are not dispatched again.
 - A member is not cloned locally → clone it with `specify workflow run
-  multi-repo-bootstrap` (needs the member's `url` in the manifest), or
+  multirepo-bootstrap` (needs the member's `url` in the manifest), or
   re-run with `-i missing=skip` (configuration mistakes still abort; `skip`
   covers local absence only).
 - Unclear whether the workspace is healthy → `specify workflow run
-  multi-repo-check --json` and inspect the `members` report.
+  multirepo-check --json` and inspect the `members` report.
 - Tasks were not split → run `speckit.multirepo.tasks` in the central (the
   `after_tasks` hook offers it automatically after `speckit.tasks`).
 - Wrong dispatch order → fix `depends_on` in `.specify/workspace.yml`; the
   graph is never inferred.
 - Nobody knows which repos talk to which → `speckit.multirepo.domain`
   (`auto` for a full sweep, `guided <member>` to walk the flow from one
-  piece); the result is visible in `multi-repo-check`'s `topology` output.
+  piece); the result is visible in `multirepo-check`'s `topology` output.
 - Existing code, no specs (members declared, no `specs/baseline/*/`) →
   `speckit.multirepo.reverse` before the first feature: `contracts-only`
   to centralize the interface specs, `auto` for a full draft, `guided

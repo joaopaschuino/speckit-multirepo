@@ -1,4 +1,4 @@
-"""Workspace manifest parsing for the multi-repo extension.
+"""Workspace manifest parsing for the multirepo extension.
 
 A *workspace* is a central specs repository plus a set of member
 repositories, declared in ``.specify/workspace.yml`` at the central
@@ -21,7 +21,7 @@ project root::
 ``depends_on`` is the execution graph (dispatch order, must be acyclic);
 ``communicates_with`` is the domain's communication topology (informational,
 may contain cycles) and never affects dispatch. ``url`` is the git remote the
-bootstrap (``multi-repo-bootstrap`` workflow) clones a member from when its
+bootstrap (``multirepo-bootstrap`` workflow) clones a member from when its
 ``path`` does not exist yet.
 
 The manifest is deliberately shaped as a candidate native contract: the
@@ -127,7 +127,7 @@ def load_workspace(project_root: Path) -> Workspace:
     if not manifest_path.is_file():
         raise WorkspaceError(
             f"No workspace manifest found at {manifest_path}. Declare the "
-            "workspace members in .specify/workspace.yml (see the multi-repo "
+            "workspace members in .specify/workspace.yml (see the multirepo "
             "extension README) and try again."
         )
 

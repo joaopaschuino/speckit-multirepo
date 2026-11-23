@@ -16,14 +16,14 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
 
 ## Purpose
 
-This repository is the **central specs repository** of a multi-repo workspace. The feature's implementation is spread across member repositories declared in `.specify/workspace.yml`. This command splits the feature's root `tasks.md` into one task file per participating member and rewrites the root `tasks.md` as an orchestration page.
+This repository is the **central specs repository** of a multirepo workspace. The feature's implementation is spread across member repositories declared in `.specify/workspace.yml`. This command splits the feature's root `tasks.md` into one task file per participating member and rewrites the root `tasks.md` as an orchestration page.
 
 ## Outline
 
 1. Run `{SCRIPT}` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute.
 
 2. **Load the workspace manifest**: read `.specify/workspace.yml` from the repo root. If it does not exist or cannot be parsed, **STOP** with:
-   `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multi-repo workspace (see the multi-repo extension README).`
+   `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multirepo workspace (see the multirepo extension README).`
    Note each member's `id`, `path`, `tasks_file` (default `tasks/<id>.md`), and `depends_on`.
 
 3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multirepo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multirepo.reverse`), read it too — its Interfaces, Data model, Behaviors, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does. Use it in two ways only:
@@ -98,7 +98,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    - Generate the **Depends on** column from `.specify/workspace.yml` (`depends_on`), never guess it from the tasks — the manifest is the source of truth for dispatch order; this table is a human-readable mirror
    - Keep central/contract tasks listed under a separate "Central" section
    - Include a contract-check member (step 5a) in the table like any other member
-   - Status column starts as `pending` for every member. The `multi-repo-implement` step keeps it current during dispatch (`pending → dispatched → verified | completed | failed`; `completed` means dispatched successfully with no Verification commands). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
+   - Status column starts as `pending` for every member. The `multirepo-implement` step keeps it current during dispatch (`pending → dispatched → verified | completed | failed`; `completed` means dispatched successfully with no Verification commands). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
 
 7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, any ambiguous classifications you resolved, which baselines were read, and any task that contradicts a `confirmed` baseline requirement (flag it — the feature may be changing intended behavior on purpose, but the user should know).
 

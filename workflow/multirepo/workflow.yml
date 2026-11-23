@@ -1,6 +1,6 @@
 schema_version: "1.0"
 workflow:
-  id: "multi-repo"
+  id: "multirepo"
   name: "Multi-Repo Implementation"
   version: "1.0.0"
   author: "Joao Victor"
@@ -48,7 +48,7 @@ steps:
     verdict_input: confirm
 
   - id: implement
-    type: multi-repo-implement
+    type: multirepo-implement
     feature: "{{ inputs.feature }}"
     dry_run: "{{ inputs.dry_run }}"
     missing: "{{ inputs.missing }}"

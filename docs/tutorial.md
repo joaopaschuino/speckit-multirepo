@@ -1,4 +1,4 @@
-# Tutorial: your first multi-repo feature
+# Tutorial: your first multirepo feature
 
 This walkthrough builds a minimal workspace from scratch — one central specs
 repository plus two member repositories — and takes a feature all the way
@@ -35,7 +35,7 @@ done
 ```
 
 Each member keeps the full standard Spec Kit command set installed; the
-multi-repo extension adds one more command to them (`speckit.multirepo.implement`).
+multirepo extension adds one more command to them (`speckit.multirepo.implement`).
 
 ## 1. Install the extension
 
@@ -103,7 +103,7 @@ unreadable) constitution file fails the run before any dispatch.
 > `/speckit.multirepo.workspace` in the central repo — it scans sibling
 > directories (and subdirectories, for mono-repos) for Spec Kit projects and proposes the manifest (you fill in
 > the `depends_on` graph), and audits an existing one afterwards. Verify
-> readiness at any time with `specify workflow run multi-repo-check` — a
+> readiness at any time with `specify workflow run multirepo-check` — a
 > read-only report of which members are ready, missing, or misconfigured.
 > To record *who talks to whom* (the manifest's `domain` and
 > `communicates_with`), run `/speckit.multirepo.domain auto` for a full
@@ -149,7 +149,7 @@ in the central slice or `contracts/`.
 Back in your shell, in `central/`:
 
 ```sh
-specify workflow run multi-repo
+specify workflow run multirepo
 ```
 
 What happens:
@@ -166,7 +166,7 @@ What happens:
 Non-interactive (CI):
 
 ```sh
-specify workflow run multi-repo \
+specify workflow run multirepo \
   -i feature=specs/001-<slug> -i confirm=approve -i review=approve --json
 ```
 
@@ -198,7 +198,7 @@ reset --hard` to drop its changes but keep its task file unchecked), or make
 its dispatch fail, then re-run:
 
 ```sh
-specify workflow run multi-repo          # s3 completes, lambda fails → run fails
+specify workflow run multirepo          # s3 completes, lambda fails → run fails
 # fix whatever broke lambda...
 specify workflow resume <run-id>         # re-dispatches only what's left
 ```
@@ -240,4 +240,4 @@ orchestrator.
 - The automated version of this tutorial: `tests/test_e2e_workflow.py`
 - Once a real feature has flown through the workspace, collect your metrics
   (integration rework, spec→PR time) — they are the evidence for proposing
-  multi-repo support upstream in Spec Kit
+  multirepo support upstream in Spec Kit

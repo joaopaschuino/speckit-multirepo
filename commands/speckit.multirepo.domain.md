@@ -16,7 +16,7 @@ Accepted forms:
 
 ## Purpose
 
-This repository is the **central specs repository** of a multi-repo workspace. `.specify/workspace.yml` already declares the members and the execution order (`depends_on`). This command fills in the **domain view** of the same manifest — the optional member fields `domain` and `communicates_with` — and writes a human-readable domain map at `.specify/memory/domain.md` (diagram, communication table with channel and direction, and the context the user gave).
+This repository is the **central specs repository** of a multirepo workspace. `.specify/workspace.yml` already declares the members and the execution order (`depends_on`). This command fills in the **domain view** of the same manifest — the optional member fields `domain` and `communicates_with` — and writes a human-readable domain map at `.specify/memory/domain.md` (diagram, communication table with channel and direction, and the context the user gave).
 
 Two graphs, two meanings — keep them apart at all times:
 
@@ -159,10 +159,10 @@ flowchart LR
 
 Members shared by several domains use `domain: platform` (or `shared-*`): one subgraph of their own, consumers as cross-domain edges.
 
-Diagram conventions match the orchestrator's `topology` output (`.step_results.check.output.topology` in `.specify/workflows/runs/<run-id>/state.json` after `specify workflow run multi-repo-check`): one `subgraph` per domain; `a ==> b` for `depends_on` (a before b — copied from the manifest, never inferred); `a -.-> b` for communication, `a <-.-> b` when both list each other; external systems as `x_<name>[("…")]` nodes with a labelled dotted edge.
+Diagram conventions match the orchestrator's `topology` output (`.step_results.check.output.topology` in `.specify/workflows/runs/<run-id>/state.json` after `specify workflow run multirepo-check`): one `subgraph` per domain; `a ==> b` for `depends_on` (a before b — copied from the manifest, never inferred); `a -.-> b` for communication, `a <-.-> b` when both list each other; external systems as `x_<name>[("…")]` nodes with a labelled dotted edge.
 
 ## Step 5 — Report
 
-- Interactive: what was written (manifest fields changed, domain map path), the open questions left unanswered, and the next step — `specify workflow run multi-repo-check --json` renders the same topology from the manifest; `/speckit.multirepo.tasks` reads the domain map for context when classifying tasks.
+- Interactive: what was written (manifest fields changed, domain map path), the open questions left unanswered, and the next step — `specify workflow run multirepo-check --json` renders the same topology from the manifest; `/speckit.multirepo.tasks` reads the domain map for context when classifying tasks.
 - Headless: the domain map path, the YAML to apply, and a prominent note that **nothing was written to the manifest**.
 - Always: remind that `depends_on` was not touched — if the scan revealed a producer/consumer relationship that should also order dispatch, say which one and let the user decide.

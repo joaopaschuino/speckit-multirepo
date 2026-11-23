@@ -1,6 +1,6 @@
 # Multi-Repo extension configuration.
 #
-# All fields are optional. The orchestrated dispatch (the multi-repo workflow
+# All fields are optional. The orchestrated dispatch (the multirepo workflow
 # step) reads its own settings from the step configuration in workflow YAML;
 # this file only carries defaults for interactive, non-orchestrated use of
 # /speckit.multirepo.implement inside a member repository.

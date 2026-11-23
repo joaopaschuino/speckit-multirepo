@@ -1,5 +1,5 @@
 ---
-description: Scaffold, audit, or bootstrap (clone the missing members of) the multi-repo workspace manifest (.specify/workspace.yml) against the local filesystem
+description: Scaffold, audit, or bootstrap (clone the missing members of) the multirepo workspace manifest (.specify/workspace.yml) against the local filesystem
 ---
 
 ## User Input
@@ -12,7 +12,7 @@ The user may pass `audit` to force the audit mode, `bootstrap` (or a request suc
 
 ## Purpose
 
-This repository is the **central specs repository** of a multi-repo workspace. This command maintains `.specify/workspace.yml` — the manifest declaring the workspace's member repositories and their dependency graph. It has three modes:
+This repository is the **central specs repository** of a multirepo workspace. This command maintains `.specify/workspace.yml` — the manifest declaring the workspace's member repositories and their dependency graph. It has three modes:
 
 - **Scaffold** (no manifest yet): discover Spec Kit projects around this repository and propose a manifest. Dependency knowledge is human: the command proposes members, **never invents `depends_on`**.
 - **Audit** (manifest exists): report member readiness and drift (repos present locally but not declared), propose additions with user confirmation, and fill missing member `url`s from their `origin` remote. Never modifies any other field of existing entries.
@@ -51,7 +51,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
 
 5. **Write** `.specify/workspace.yml` with the confirmed members and dependencies. If running **headless** (no user to answer): write the manifest with empty `depends_on` for every member and print a prominent warning that the dependency graph is empty (all members would dispatch in wave 0) and must be filled before the first dispatch is trusted.
 
-6. **Report next steps**: run `/speckit.multirepo.domain` to map the domain topology (`domain`, `communicates_with`) from the members' code, `/speckit.multirepo.tasks` after a feature's tasks exist, and `specify workflow run multi-repo-check` to verify member readiness at any time.
+6. **Report next steps**: run `/speckit.multirepo.domain` to map the domain topology (`domain`, `communicates_with`) from the members' code, `/speckit.multirepo.tasks` after a feature's tasks exist, and `specify workflow run multirepo-check` to verify member readiness at any time.
 
 ## Mode 2 — Audit (manifest exists)
 
@@ -73,7 +73,7 @@ This repository is the **central specs repository** of a multi-repo workspace. T
 
 3. **Detect drift**: repeat the Mode 1 discovery scan; list Spec Kit projects found by that scan that are **not** declared in the manifest as "undeclared candidates".
 
-4. **Report**: the table above, a note to run the bootstrap (Mode 3) when any member is not cloned but has a `url`, undeclared candidates, a **topology** section when any member declares `domain` or `communicates_with` — a Mermaid `flowchart LR` with one `subgraph` per domain, `dep ==> member` for each `depends_on` edge (execution order), `a -.-> b` for each `communicates_with` edge (`a <-.-> b` when both list each other) — and a note that `specify workflow run multi-repo-check` gives the same readiness report (plus dispatch waves) in machine-readable form via `--json`.
+4. **Report**: the table above, a note to run the bootstrap (Mode 3) when any member is not cloned but has a `url`, undeclared candidates, a **topology** section when any member declares `domain` or `communicates_with` — a Mermaid `flowchart LR` with one `subgraph` per domain, `dep ==> member` for each `depends_on` edge (execution order), `a -.-> b` for each `communicates_with` edge (`a <-.-> b` when both list each other) — and a note that `specify workflow run multirepo-check` gives the same readiness report (plus dispatch waves) in machine-readable form via `--json`.
 
 5. **Additions need confirmation**: if the user asked to add a member (or approves an undeclared candidate), append the entry with `depends_on: []` (its id follows the Mode 1 rules and must not collide with an existing id — derive it from the relative path if it would) and flag that the dependency must be set by hand. **Never** modify or remove existing members or their `depends_on` in this mode.
 
@@ -83,10 +83,10 @@ This repository is the **central specs repository** of a multi-repo workspace. T
 
 Runs when the user asks for `bootstrap` (or to configure / set up the workspace after cloning only this repository). Requires `.specify/workspace.yml`; if it is missing, say so and go to Mode 1.
 
-1. Run `specify workflow run multi-repo-bootstrap -i dry_run=true` and show which members would be cloned, which are already present, and which are absent without a `url`. Interactively, confirm before cloning; headless, proceed.
+1. Run `specify workflow run multirepo-bootstrap -i dry_run=true` and show which members would be cloned, which are already present, and which are absent without a `url`. Interactively, confirm before cloning; headless, proceed.
 
-2. Run `specify workflow run multi-repo-bootstrap`. For each member whose `path` does not exist and that declares `url`, it runs `git clone <url> <path>` (parent directories created; local paths in `url` are relative to this repository). Members already present are skipped; absent members without `url` are reported and skipped; a failed clone aborts the run with the git error (clones completed before it are kept). Clones that land inside this repository (e.g. `apps/web`) are added to its `.gitignore` so they are never recorded as embedded repositories. Credential prompts are disabled — the clone must authenticate through an SSH agent or a credential helper.
+2. Run `specify workflow run multirepo-bootstrap`. For each member whose `path` does not exist and that declares `url`, it runs `git clone <url> <path>` (parent directories created; local paths in `url` are relative to this repository). Members already present are skipped; absent members without `url` are reported and skipped; a failed clone aborts the run with the git error (clones completed before it are kept). Clones that land inside this repository (e.g. `apps/web`) are added to its `.gitignore` so they are never recorded as embedded repositories. Credential prompts are disabled — the clone must authenticate through an SSH agent or a credential helper.
 
-   If the `multi-repo-bootstrap` workflow is not installed (older install), follow the same rules by hand with `git clone`, and suggest re-running `install.sh central` to get it.
+   If the `multirepo-bootstrap` workflow is not installed (older install), follow the same rules by hand with `git clone`, and suggest re-running `install.sh central` to get it.
 
-3. **Report** the cloned / present / missing members and the `.gitignore` entries added. For absent members without `url`, ask the user for the remote (then add `url` to that entry, with confirmation, and re-run). For cloned members that are not Spec Kit projects yet (`initialized: false`), point to `specify init --here --integration <agent>` and `install.sh member`. Finish with `specify workflow run multi-repo-check` to confirm every member is ready.
+3. **Report** the cloned / present / missing members and the `.gitignore` entries added. For absent members without `url`, ask the user for the remote (then add `url` to that entry, with confirmation, and re-run). For cloned members that are not Spec Kit projects yet (`initialized: false`), point to `specify init --here --integration <agent>` and `install.sh member`. Finish with `specify workflow run multirepo-check` to confirm every member is ready.
