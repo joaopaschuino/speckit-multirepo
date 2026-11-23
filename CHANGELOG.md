@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-11-23
 
-Initial release. Requires Spec Kit ≥ 1.1.0. Extension id `multirepo`: every
+First stable release. Requires Spec Kit ≥ 1.1.0. Extension id `multirepo`: every
 agent command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`);
 the workflows are `multirepo`, `multirepo-check` and `multirepo-bootstrap`,
 and the custom step type is `multirepo-implement`.
@@ -58,3 +58,14 @@ and the custom step type is `multirepo-implement`.
   - `speckit.multirepo.help`: orientation, including "Who runs what, where"
 - `install.sh` (central | member) with `--dev` and `--release` modes, in-place
   upgrades by re-running it, and `SPECIFY_BIN`
+
+### Upgrade from 0.x
+
+0.x used the id `multi-repo` for the extension, workflows and step. Upgrade
+the central repository and every member together, after finishing paused 0.x
+runs (they cannot be resumed afterwards), by re-running `install.sh`: it
+removes the `multi-repo` extension, carries `multi-repo-config.yml` over to
+`multirepo-config.yml` (backed up in `.specify/multirepo-migration/` until
+then; an edited `multirepo-config.yml` is kept) and, on the central
+repository, removes the `multi-repo*` workflows and the `multi-repo-implement`
+step. See README → Upgrading an existing workspace.

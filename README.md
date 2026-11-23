@@ -123,18 +123,27 @@ Read the target version's entry in the [CHANGELOG](CHANGELOG.md) first —
 a release may carry an `Upgrade` section with extra steps (for example
 manifest format changes).
 
-**Coming from a 0.x release?** 1.0.0 is a new installation, not an
-upgrade: the extension id changed from `multi-repo` to `multirepo`, and
-nothing is migrated. Remove the old extension, then install 1.0.0 as on
-a fresh repository (settings saved in
-`.specify/extensions/multi-repo/multi-repo-config.yml` are not carried
-over — set them again in `multirepo-config.yml` if you need them). Run
-`extension remove` **inside the member** (it targets the current directory):
+**Coming from a 0.x release?** 0.x installed everything under the id
+`multi-repo`; 1.0.0 renames the extension, workflows and step to
+`multirepo`. Upgrade the central repository **and every member together** —
+a member still on 0.x has no `speckit.multirepo.implement` to dispatch.
+Finish or abandon paused 0.x runs first: they cannot be resumed after the
+upgrade (the script warns about any it finds). Then run the same
+`install.sh` commands as above; when it finds `.specify/extensions/multi-repo/`
+it:
 
-```sh
-(cd /path/to/member-repo && specify extension remove multi-repo)
-./install.sh member /path/to/member-repo --release v1.0.0
-```
+1. saves `multi-repo-config.yml` to `.specify/multirepo-migration/`;
+2. removes the `multi-repo` extension (its `speckit.multi-repo.*` commands,
+   skills and hook);
+3. installs 1.0.0 and moves the saved settings to `multirepo-config.yml`
+   (an already edited `multirepo-config.yml` is kept; the backup stays);
+4. on the central repository, removes the `multi-repo`, `multi-repo-check`
+   and `multi-repo-bootstrap` workflows and the `multi-repo-implement` step.
+
+If the install fails after step 2, the settings stay in
+`.specify/multirepo-migration/` and the next successful run restores them.
+Old runs remain under `.specify/workflows/runs/` but `--report-only` ignores
+them. Re-run `specify workflow run multirepo-check` to verify.
 
 If your `PATH` carries a `specify` older than 1.1.0, point the script at the
 right binary: `SPECIFY_BIN=/path/to/specify ./install.sh …`.

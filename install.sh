@@ -54,6 +54,59 @@ command -v "$SPECIFY_BIN" >/dev/null 2>&1 || {
 project="$(cd "$project" && pwd)"
 cd "$project"
 
+# 0.x installed everything under the id `multi-repo`. Its settings are kept
+# in the project (so a failed install cannot lose them), the old extension is
+# removed, and the settings are restored once the new one is installed —
+# never over a multirepo-config.yml that was edited.
+legacy_dir="$project/.specify/extensions/multi-repo"
+backup_dir="$project/.specify/multirepo-migration"
+backup="$backup_dir/multi-repo-config.yml"
+new_config="$project/.specify/extensions/multirepo/multirepo-config.yml"
+legacy_workflows="multi-repo multi-repo-check multi-repo-bootstrap"
+if [ -d "$legacy_dir" ]; then
+  echo "migrating the 0.x 'multi-repo' install to multirepo"
+  if [ -f "$legacy_dir/multi-repo-config.yml" ] && [ ! -f "$backup" ]; then
+    mkdir -p "$backup_dir"
+    cp "$legacy_dir/multi-repo-config.yml" "$backup"
+  fi
+  "$SPECIFY_BIN" extension remove multi-repo --force \
+    || echo "warning: could not remove the 0.x 'multi-repo' extension" >&2
+fi
+if [ "$role" = "central" ]; then
+  for state in "$project"/.specify/workflows/runs/*/state.json; do
+    [ -f "$state" ] || continue
+    if grep -Eq '"workflow_id": "multi-repo(-check|-bootstrap)?"' "$state" \
+      && grep -q '"status": "paused"' "$state"; then
+      echo "warning: 0.x run $(basename "$(dirname "$state")") is paused; it cannot be resumed after the upgrade" >&2
+    fi
+  done
+fi
+restore_legacy_config() {
+  [ -f "$backup" ] || return 0
+  # `extension add` writes the stock template; anything else was edited.
+  if [ -f "$new_config" ] \
+    && ! cmp -s "$new_config" "$project/.specify/extensions/multirepo/config-template.yml"; then
+    echo "note: kept the existing $new_config; 0.x settings remain at $backup"
+    return 0
+  fi
+  mv "$backup" "$new_config"
+  rmdir "$backup_dir" 2>/dev/null || true
+  echo "restored the 0.x settings to $new_config"
+}
+remove_legacy_workflows() {
+  local id
+  for id in $legacy_workflows; do
+    if [ -d "$project/.specify/workflows/$id" ]; then
+      "$SPECIFY_BIN" workflow remove "$id" \
+        || echo "warning: could not remove the 0.x workflow '$id'" >&2
+    fi
+  done
+  if [ -d "$project/.specify/workflows/steps/multi-repo-implement" ]; then
+    "$SPECIFY_BIN" workflow step remove multi-repo-implement \
+      || echo "warning: could not remove the 0.x step 'multi-repo-implement'" >&2
+  fi
+}
+
 # `extension add` can exit 0 without installing (e.g. a declined prompt);
 # that must not pass as success.
 # An already-installed manifest is not enough either: it must carry the
@@ -65,12 +118,14 @@ ext_version() {
 require_installed() {
   if [ ! -f "$ext_manifest" ]; then
     echo "error: the extension was not installed." >&2
+    [ -f "$backup" ] && echo "0.x settings saved at $backup" >&2
     exit 1
   fi
   local expected="$1" got
   got="$(ext_version "$ext_manifest")"
   if [ -n "$expected" ] && [ "$got" != "$expected" ]; then
     echo "error: the extension was not installed (found version $got, expected $expected)." >&2
+    [ -f "$backup" ] && echo "0.x settings saved at $backup" >&2
     exit 1
   fi
 }
@@ -98,6 +153,11 @@ else
     "$SPECIFY_BIN" workflow add multirepo-check --from "$wf_check_url"
     "$SPECIFY_BIN" workflow add multirepo-bootstrap --from "$wf_bootstrap_url"
   fi
+fi
+
+restore_legacy_config
+if [ "$role" = "central" ]; then
+  remove_legacy_workflows
 fi
 
 # Member repositories get the persistent governance pointer in AGENTS.md:
