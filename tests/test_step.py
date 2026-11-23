@@ -76,7 +76,7 @@ def test_execute_dispatches_in_waves(workspace_setup, step_module, monkeypatch, 
     assert result.output["failed"] == []
     assert [c["member"] for c in dispatch_calls] == [S3, LAMBDA]  # dependency order
     for call in dispatch_calls:
-        assert call["command"] == "speckit.multi-repo.implement"
+        assert call["command"] == "speckit.multirepo.implement"
         assert call["project_root"] == str(members[call["member"].removeprefix("repo-")])
         assert call["args"].startswith("tasks/")
         assert call["stream"] is True  # sequential waves stream live output

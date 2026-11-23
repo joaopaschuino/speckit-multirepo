@@ -60,11 +60,11 @@ This repository is a **member** of a multi-repo workspace. The active feature is
 2. **Resolve TASKS_FILE**, in this priority order:
    - `$ARGUMENTS` if non-empty (a path relative to FEATURE_DIR, e.g. `tasks/lambda.md`)
    - the `SPECKIT_MULTI_REPO_TASKS_FILE` environment variable
-   - `implement.tasks_file` in `.specify/extensions/multi-repo/multi-repo-config.yml`, if set
+   - `implement.tasks_file` in `.specify/extensions/multirepo/multirepo-config.yml`, if set
    - otherwise, ask the user which member task file to implement (interactive only)
 
    Then verify `FEATURE_DIR/TASKS_FILE` exists. If it does not, **STOP** with:
-   `Member task file not found: FEATURE_DIR/TASKS_FILE. Run /speckit.multi-repo.tasks in the central specs repository to split tasks across members.`
+   `Member task file not found: FEATURE_DIR/TASKS_FILE. Run /speckit.multirepo.tasks in the central specs repository to split tasks across members.`
 
    Do **not** fall back to the feature's root `tasks.md`: in a multi-repo workspace that file is an orchestration page, not this member's work list.
 

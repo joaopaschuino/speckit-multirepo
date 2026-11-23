@@ -362,7 +362,7 @@ def update_orchestration_status(tasks_md: Path, member_id: str, status: str) -> 
     """Set *member_id*'s Status cell in the orchestration page table.
 
     The table is the one whose header row names both a ``Member`` and a
-    ``Status`` column (written by ``/speckit.multi-repo.tasks``). Only that
+    ``Status`` column (written by ``/speckit.multirepo.tasks``). Only that
     cell changes; the rest of the file is preserved byte for byte. Returns
     ``True`` when a row was updated. Missing files, missing tables, and
     unknown members are a silent no-op: the page is a human-readable mirror,

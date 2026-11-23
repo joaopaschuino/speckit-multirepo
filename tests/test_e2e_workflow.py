@@ -161,8 +161,8 @@ def test_install_run_and_resume(central):
     s3_call = log[0]
     assert s3_call["cwd"] == str(root / "repo-s3")
     # claude is a skills integration: the extension command's native
-    # invocation form is the hyphenated /speckit-multi-repo-implement.
-    assert "/speckit-multi-repo-implement" in s3_call["args"]
+    # invocation form is the hyphenated /speckit-multirepo-implement.
+    assert "/speckit-multirepo-implement" in s3_call["args"]
     assert "tasks/s3.md" in s3_call["args"]
     assert s3_call["feature"] == str(feature)
     assert s3_call["no_persist"] == "1"
@@ -268,7 +268,7 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     """The extension manifest validates and its commands reach the member.
 
     Members are claude (skills) projects, so the extension commands register
-    as .claude/skills/speckit-multi-repo-<name> — the exact invocation the
+    as .claude/skills/speckit-multirepo-<name> — the exact invocation the
     orchestrator step dispatches. The member is bootstrapped with the real
     ``specify init`` because command registration needs the integration's
     installed artifacts.
@@ -286,18 +286,21 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     )
     assert result.exit_code == 0, result.output
 
-    assert (member / ".specify" / "extensions" / "multi-repo" / "extension.yml").is_file()
+    assert (member / ".specify" / "extensions" / "multirepo" / "extension.yml").is_file()
     skills = member / ".claude" / "skills"
-    assert (skills / "speckit-multi-repo-implement").exists()
-    assert (skills / "speckit-multi-repo-tasks").exists()
-    assert (skills / "speckit-multi-repo-help").exists()
-    assert (skills / "speckit-multi-repo-domain").exists()
-    assert (skills / "speckit-multi-repo-reverse").exists()
-    assert (skills / "speckit-multi-repo-orchestrate").exists()
+    assert (skills / "speckit-multirepo-implement").exists()
+    assert (skills / "speckit-multirepo-tasks").exists()
+    assert (skills / "speckit-multirepo-help").exists()
+    assert (skills / "speckit-multirepo-domain").exists()
+    assert (skills / "speckit-multirepo-reverse").exists()
     assert (skills / "speckit-multirepo-orchestrate").exists()
+    # Pre-0.9.0 names stay invocable through aliases.
+    for name in ("implement", "tasks", "help", "domain", "reverse", "workspace"):
+        assert (skills / f"speckit-multi-repo-{name}").exists(), name
+    assert not (skills / "speckit-multi-repo-orchestrate").exists()
     hooks = (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
     assert "after_tasks" in hooks
-    assert "speckit.multi-repo.tasks" in hooks
+    assert "speckit.multirepo.tasks" in hooks
 
 
 def run_multi_repo(root, feature, *extra):

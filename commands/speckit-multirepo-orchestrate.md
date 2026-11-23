@@ -6,7 +6,7 @@ scripts:
   py: scripts/python/check_prerequisites.py --json --paths-only
 ---
 
-> **Central repository command (router).** This command runs in the **central specs repository** and drives the `multi-repo` workflow that dispatches each member's agent and verifies its work. It is **not** `speckit.multi-repo.implement`, which is the **worker-side** command that runs *inside a member repository* (usually dispatched headlessly by this workflow). Never run this command in a member repository.
+> **Central repository command (router).** This command runs in the **central specs repository** and drives the `multi-repo` workflow that dispatches each member's agent and verifies its work. It is **not** `speckit.multirepo.implement`, which is the **worker-side** command that runs *inside a member repository* (usually dispatched headlessly by this workflow). Never run this command in a member repository.
 
 ## User Input
 
@@ -22,29 +22,29 @@ Accepted forms (tokens in any order):
 
 ## Purpose
 
-This is the chat entry point for **everything after `tasks`**: implementation and validation of a feature whose tasks were already split per member by `speckit.multi-repo.tasks`. It wraps the terminal workflows — `multi-repo-check` (pre-flight) and `multi-repo` (dispatch + verification) — so the user does not have to drive them by hand, relays the workflow's gates to the user, and finishes with an executive HTML summary for human review.
+This is the chat entry point for **everything after `tasks`**: implementation and validation of a feature whose tasks were already split per member by `speckit.multirepo.tasks`. It wraps the terminal workflows — `multi-repo-check` (pre-flight) and `multi-repo` (dispatch + verification) — so the user does not have to drive them by hand, relays the workflow's gates to the user, and finishes with an executive HTML summary for human review.
 
 Scope rules that apply in every mode:
 
-- **No spec, plan, or tasks generation.** This command never runs `speckit.specify`, `speckit.plan`, `speckit.tasks`, or `speckit.multi-repo.tasks`, and never edits `spec.md`, `plan.md`, `tasks.md`, or `tasks/<member>.md`. When something is missing, it stops and names the command to run.
+- **No spec, plan, or tasks generation.** This command never runs `speckit.specify`, `speckit.plan`, `speckit.tasks`, or `speckit.multirepo.tasks`, and never edits `spec.md`, `plan.md`, `tasks.md`, or `tasks/<member>.md`. When something is missing, it stops and names the command to run.
 - **Validation is the workflow's, not yours.** Whether a member is done is decided by the exit codes of its `## Verification` checks, run by the orchestrator step (with `verify_retries` re-dispatches and `verification/<member>.feedback.md`). Never re-run checks yourself to "confirm", never mark a member verified from an agent's own report, and never edit member repositories.
 - **Write scope.** The only files this command writes are under `<feature>/verification/`: `report.html` and the run capture files `orchestrate.json` / `orchestrate.log`. Everything else in that directory (`report.md`, `<member>.log`, `<member>.feedback.md`) belongs to the workflow step.
 
 ## Step 1 — Resolve the feature
 
-1. Confirm this is the central repository: `.specify/workspace.yml` must exist. If it does not, **STOP** with: `No workspace manifest at .specify/workspace.yml — run this command in the central specs repository (see /speckit.multi-repo.workspace).`
+1. Confirm this is the central repository: `.specify/workspace.yml` must exist. If it does not, **STOP** with: `No workspace manifest at .specify/workspace.yml — run this command in the central specs repository (see /speckit.multirepo.workspace).`
 2. If `$ARGUMENTS` names a feature directory, use it. Otherwise run `{SCRIPT}` from the repo root and take FEATURE_DIR from its JSON output. If neither yields a directory, **STOP** and ask the user for the feature path (with `--auto`: stop with the error).
 3. Let FEATURE_DIR be the absolute path and FEATURE_REL its path relative to the repo root (POSIX separators) — the workflow input uses FEATURE_REL. FEATURE_DIR must exist.
 
 ## Step 2 — Precondition: per-member task files exist
 
-Read `.specify/workspace.yml` (member `id`, `tasks_file` — default `tasks/<id>.md`). The feature is ready for orchestration only when **at least one** member's task file exists under FEATURE_DIR (these are the product of `speckit.multi-repo.tasks`).
+Read `.specify/workspace.yml` (member `id`, `tasks_file` — default `tasks/<id>.md`). The feature is ready for orchestration only when **at least one** member's task file exists under FEATURE_DIR (these are the product of `speckit.multirepo.tasks`).
 
 If none exists, **STOP without running anything**:
 
 ```text
 No per-member task files in <FEATURE_REL>/tasks/ — this feature has not been split yet.
-Run speckit.multi-repo.tasks in this central repository first (after speckit.tasks), review the tasks/<member>.md files, then run this command again.
+Run speckit.multirepo.tasks in this central repository first (after speckit.tasks), review the tasks/<member>.md files, then run this command again.
 ```
 
 List the members that will participate (those with a task file), the members without one (not participating), and — for each participating file — whether it has a `## Verification` section. A participating member with no verification section will finish as `completed`, never `verified`: warn the user (it is not an error).

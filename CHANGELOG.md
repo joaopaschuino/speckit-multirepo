@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `speckit-multirepo-orchestrate` agent command (central repo, router side):
+- `speckit.multirepo.orchestrate` agent command — skill
+  `speckit-multirepo-orchestrate` (central repo, router side):
   implementation + validation of a feature already split into
   `tasks/<member>.md` — everything after `tasks` — driven from the agent
   chat. Takes the feature directory under `specs/` (default: the active
@@ -23,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports the result per member — validation stays the workflow's
   (`## Verification` exit codes, `verify_retries`,
   `verification/<member>.feedback.md`). Distinct from the worker-side
-  `speckit.multi-repo.implement`
+  `speckit.multirepo.implement`
 - `<feature>/verification/report.html`, written by
   `speckit-multirepo-orchestrate` at the end of the run: a standalone
   executive summary for human review (inline CSS, no dependencies) — header
@@ -32,29 +33,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   *Requires attention* with only the failing members — per check, expected
   vs actual exit and 1–2 lines of context from `<member>.feedback.md`, no
   full logs; footer with the source files for drill-down
-- Naming convention for new commands: `multirepo` as one word
-  (`speckit-multirepo-<name>`, command file
-  `commands/speckit-multirepo-<name>.md`). Existing `speckit.multi-repo.*`
-  commands keep their names. Spec Kit requires extension command names to be
-  `speckit.<extension-id>.<command>`, so the new command registers as
-  `speckit.multi-repo.orchestrate` with the alias
-  `speckit.multirepo.orchestrate` — skills-mode agents expose the
-  `speckit-multirepo-orchestrate` skill (agents that ignore aliases, such as
-  Copilot skills, list `speckit-multi-repo-orchestrate`)
-- `/speckit.multi-repo.help` lists the command in "Who runs what, where" and
+- `/speckit.multirepo.help` lists the command in "Who runs what, where" and
   recommends it once tasks are split
+
+### Changed
+
+- **Breaking:** extension id renamed from `multi-repo` to `multirepo`, the
+  naming convention from now on (`multirepo` as one word). Spec Kit requires
+  command names to be `speckit.<extension-id>.<command>`, so every command
+  is now `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`), the
+  command files are `commands/speckit.multirepo.<name>.md`, the extension
+  installs in `.specify/extensions/multirepo/`, and its settings file is
+  `multirepo-config.yml`. The pre-0.9.0 names `speckit.multi-repo.<name>`
+  stay registered as aliases (agents that ignore aliases, such as Copilot
+  skills, only list the new names). The orchestrator dispatches
+  `speckit.multirepo.implement`. Workflow ids (`multi-repo`,
+  `multi-repo-check`, `multi-repo-bootstrap`) and the step type
+  (`multi-repo-implement`) are unchanged
 
 ### Fixed
 
-- README and `/speckit.multi-repo.domain`: `workflow run --json` prints the
+- README and `/speckit.multirepo.domain`: `workflow run --json` prints the
   run outcome only; the `multi-repo-check` examples now read step outputs
   from `.specify/workflows/runs/<run-id>/state.json`
 
 ### Upgrade
 
-- Re-run the same `install.sh` command you used originally on the central
-  repository (and on each member, to keep versions aligned) to register the
-  new command. Manifests are unchanged
+- Re-run `install.sh` on the central repository **and on every member**
+  together: it removes the old `multi-repo` extension (whose commands would
+  collide with the new aliases), installs `multirepo`, and carries
+  `multi-repo-config.yml` over as `multirepo-config.yml`. A member left on
+  0.8.x has no `speckit.multirepo.implement` and its dispatch fails. Without
+  `install.sh`: `specify extension remove multi-repo --force`, then
+  `specify extension add multirepo …`. Manifests and workflows are unchanged
 
 ## [0.8.0] - 2026-11-16
 

@@ -54,6 +54,20 @@ command -v "$SPECIFY_BIN" >/dev/null 2>&1 || {
 project="$(cd "$project" && pwd)"
 cd "$project"
 
+# 0.9.0 renamed the extension id multi-repo -> multirepo. The old install
+# provides the speckit.multi-repo.* names the new one declares as aliases, so
+# it is removed first; its settings file carries over.
+legacy="$project/.specify/extensions/multi-repo"
+legacy_config=""
+if [ -d "$legacy" ]; then
+  if [ -f "$legacy/multi-repo-config.yml" ]; then
+    legacy_config="$(mktemp)"
+    cp "$legacy/multi-repo-config.yml" "$legacy_config"
+  fi
+  "$SPECIFY_BIN" extension remove multi-repo --force \
+    || echo "warning: could not remove the pre-0.9.0 'multi-repo' extension" >&2
+fi
+
 if [ "$mode" = "dev" ]; then
   "$SPECIFY_BIN" extension add "$src" --dev --force
   if [ "$role" = "central" ]; then
@@ -68,13 +82,18 @@ else
   wf_check_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-check/workflow.yml"
   wf_bootstrap_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-bootstrap/workflow.yml"
   step_zip="https://github.com/$REPO/releases/download/$release/step-multi-repo-implement-$release.zip"
-  "$SPECIFY_BIN" extension add multi-repo --from "$ext_zip" --force
+  "$SPECIFY_BIN" extension add multirepo --from "$ext_zip" --force
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --from "$step_zip" --force
     "$SPECIFY_BIN" workflow add multi-repo --from "$wf_url"
     "$SPECIFY_BIN" workflow add multi-repo-check --from "$wf_check_url"
     "$SPECIFY_BIN" workflow add multi-repo-bootstrap --from "$wf_bootstrap_url"
   fi
+fi
+
+if [ -n "$legacy_config" ]; then
+  mkdir -p "$project/.specify/extensions/multirepo"
+  mv "$legacy_config" "$project/.specify/extensions/multirepo/multirepo-config.yml"
 fi
 
 # Member repositories get the persistent governance pointer in AGENTS.md:
@@ -84,4 +103,4 @@ if [ "$role" = "member" ]; then
   "$src/governance-note.sh" "$project"
 fi
 
-echo "multi-repo ($role, $mode) installed in $project"
+echo "multirepo ($role, $mode) installed in $project"

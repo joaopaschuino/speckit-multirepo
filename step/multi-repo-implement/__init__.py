@@ -13,7 +13,7 @@ Configuration (all fields optional)::
       type: multi-repo-implement
       feature: "specs/001-my-feature"   # default: active feature
       repos: [s3, lambda]               # default: members with a tasks file
-      command: speckit.multi-repo.implement
+      command: speckit.multirepo.implement
       max_concurrency: 1                # per-wave parallelism (stream=False)
       dispatch_timeout: 3600            # seconds, every dispatch and check
       skip_completed: true              # skip members with all tasks checked
@@ -124,7 +124,7 @@ from .verification import (
     write_report,
 )
 
-DEFAULT_COMMAND = "speckit.multi-repo.implement"
+DEFAULT_COMMAND = "speckit.multirepo.implement"
 
 _CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[(?P<mark>[ xX])\]", re.MULTILINE)
 
@@ -330,7 +330,7 @@ class MultiRepoImplementStep(StepBase):
                     "No workspace members participate in this feature. Give "
                     "the step's 'repos' setting a member id list, or create "
                     "each member's task file under the feature directory "
-                    "(run /speckit.multi-repo.tasks in the central repository)."
+                    "(run /speckit.multirepo.tasks in the central repository)."
                 ),
             )
 
