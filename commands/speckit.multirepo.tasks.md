@@ -16,17 +16,19 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
 
 ## Purpose
 
-This repository is the **central specs repository** of a multi-repo workspace. The feature's implementation is spread across member repositories declared in `.specify/workspace.yml`. This command splits the feature's root `tasks.md` into one task file per participating member and rewrites the root `tasks.md` as an orchestration page.
+This repository is the **central specs repository** of a multirepo workspace. The feature's implementation is spread across member repositories declared in `.specify/workspace.yml`. This command splits the feature's root `tasks.md` into one task file per participating member and rewrites the root `tasks.md` as an orchestration page.
 
 ## Outline
 
 1. Run `{SCRIPT}` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute.
 
-2. **Load the workspace manifest**: read `.specify/workspace.yml` from the repo root. If it does not exist or cannot be parsed, **STOP** with:
-   `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multi-repo workspace (see the multi-repo extension README).`
+2. **Load the workspace manifest**: read `.specify/workspace.yml` from the repo root.
+   - If it does not exist, this is not the central specs repository (e.g. a member, where the mandatory `after_tasks` hook also runs this command). End without changing any file, and say:
+     `No workspace manifest at .specify/workspace.yml — not the central specs repository, so tasks.md is left as is (no multirepo split).`
+   - If it exists but cannot be parsed, **STOP** with the parse error.
    Note each member's `id`, `path`, `tasks_file` (default `tasks/<id>.md`), and `depends_on`.
 
-3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multi-repo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multi-repo.reverse`), read it too — its Interfaces, Data model, Behaviors, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does. Use it in two ways only:
+3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multirepo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multirepo.reverse`), read it too — its Interfaces, Data model, Behaviors, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does. Use it in two ways only:
    - **Ownership**: only what a member *exposes* — its Interfaces and Data model sections — points to it as owner. A member that merely consumes an interface (it is in that member's External dependencies) is never made its owner by the baseline. Explicit targets in the task text (paths, services, a `repo: <id>` tag) always win; the baseline only breaks ties for tasks that name an interface or entity and nothing else.
    - **Existing pieces**: when a task names an interface, entity, or job the owning member's baseline already lists, the member task gets a note under it (see step 5) saying it already exists, so the member's agent extends or changes it instead of recreating it.
 
@@ -98,12 +100,12 @@ This repository is the **central specs repository** of a multi-repo workspace. T
    - Generate the **Depends on** column from `.specify/workspace.yml` (`depends_on`), never guess it from the tasks — the manifest is the source of truth for dispatch order; this table is a human-readable mirror
    - Keep central/contract tasks listed under a separate "Central" section
    - Include a contract-check member (step 5a) in the table like any other member
-   - Status column starts as `pending` for every member. The `multi-repo-implement` step keeps it current during dispatch (`pending → dispatched → verified | completed | failed`; `completed` means dispatched successfully with no Verification commands). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
+   - Status column starts as `pending` for every member. The `multirepo-implement` step keeps it current during dispatch (`pending → dispatched → verified | incomplete | completed | failed`; `completed` means dispatched successfully with no Verification commands; `incomplete` means every Verification command passed but the member's task file still has open tasks). Keep the column header exactly `Status` and the member id exactly as in the manifest so the step can find the row
 
 7. **Report**: members detected vs participating, task counts per member, tasks left in the central slice, any ambiguous classifications you resolved, which baselines were read, and any task that contradicts a `confirmed` baseline requirement (flag it — the feature may be changing intended behavior on purpose, but the user should know).
 
 ## Notes
 
 - Re-running this command is safe: it regenerates member task files and the orchestration page, but **must preserve existing checkbox state** in member task files (append missing tasks, do not reset completed ones)
-- Preserve the `## Verification` section the same way: keep every existing command line verbatim (including hand-edited commands and expected exit codes), append only checks that are missing, and never drop or weaken a check. Keep `ready:` front matter as is. In the orchestration page, keep each existing member's Status value (`dispatched`, `verified`, `failed`, …) instead of resetting it to `pending`
+- Preserve the `## Verification` section the same way: keep every existing command line verbatim (including hand-edited commands and expected exit codes), append only checks that are missing, and never drop or weaken a check. Keep `ready:` front matter as is. In the orchestration page, keep each existing member's Status value (`dispatched`, `verified`, `failed`, …) — except that a member whose task file now has at least one open `- [ ]` task (new tasks from a re-split, converge, or review) goes back to `pending` unless it is `dispatched`: a `verified` member with open work would be skipped or misreported. Report each reset
 - If the feature genuinely touches a single repository, say so and suggest running the standard implement command instead — no split is needed

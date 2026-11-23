@@ -10,10 +10,10 @@ directory and the central feature directory exported through
 Configuration (all fields optional)::
 
     - id: implement
-      type: multi-repo-implement
+      type: multirepo-implement
       feature: "specs/001-my-feature"   # default: active feature
       repos: [s3, lambda]               # default: members with a tasks file
-      command: speckit.multi-repo.implement
+      command: speckit.multirepo.implement
       max_concurrency: 1                # per-wave parallelism (stream=False)
       dispatch_timeout: 3600            # seconds, every dispatch and check
       skip_completed: true              # skip members with all tasks checked
@@ -53,7 +53,7 @@ no-integration / unknown-integration / no-dispatch / constitution-missing),
 participation and waves are computed, and nothing is dispatched. Each member
 entry also carries its ``domain`` and ``communicates_with`` when declared, and
 ``topology`` holds a Mermaid flowchart of the whole workspace (domains,
-dependency and communication edges). The ``multi-repo-check`` workflow wraps
+dependency and communication edges). The ``multirepo-check`` workflow wraps
 this mode as a workspace doctor.
 
 ``bootstrap: true`` turns the step into the workspace bootstrap: every
@@ -62,7 +62,7 @@ cloned (``git clone <url> <path>``), members already present are skipped,
 absent members without a ``url`` are reported, and paths of cloned members
 inside the central repository are added to its ``.gitignore``. Combined with
 ``dry_run: true`` it only reports what it would clone. No feature directory
-is needed and nothing is dispatched. The ``multi-repo-bootstrap`` workflow
+is needed and nothing is dispatched. The ``multirepo-bootstrap`` workflow
 wraps this mode.
 
 ``missing: skip`` supports teams where each member of the team has cloned
@@ -119,12 +119,13 @@ from .verification import (
     kill_process_tree,
     parse_verification,
     run_verification,
+    task_lines,
     update_orchestration_status,
     write_feedback,
     write_report,
 )
 
-DEFAULT_COMMAND = "speckit.multi-repo.implement"
+DEFAULT_COMMAND = "speckit.multirepo.implement"
 
 _CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[(?P<mark>[ xX])\]", re.MULTILINE)
 
@@ -185,7 +186,7 @@ _CONFIG_ERROR_STATUSES = (
 class MultiRepoImplementStep(StepBase):
     """Dispatch a centrally-specified feature to workspace members."""
 
-    type_key = "multi-repo-implement"
+    type_key = "multirepo-implement"
 
     # -- validation ---------------------------------------------------------
 
@@ -330,7 +331,7 @@ class MultiRepoImplementStep(StepBase):
                     "No workspace members participate in this feature. Give "
                     "the step's 'repos' setting a member id list, or create "
                     "each member's task file under the feature directory "
-                    "(run /speckit.multi-repo.tasks in the central repository)."
+                    "(run /speckit.multirepo.tasks in the central repository)."
                 ),
             )
 
@@ -661,7 +662,7 @@ class MultiRepoImplementStep(StepBase):
             groups.setdefault(status, []).append(member_id)
         return "; ".join(
             f"{status}: {', '.join(groups[status])}"
-            for status in ("verified", "failed", "skipped")
+            for status in ("verified", "incomplete", "failed", "skipped")
             if status in groups
         )
 
@@ -673,6 +674,8 @@ class MultiRepoImplementStep(StepBase):
         if verification.get("status") == "failed":
             failing = [c["name"] for c in verification.get("commands", []) if c["status"] != "passed"]
             return f"verification failed: {', '.join(failing)}"
+        if verification.get("status") == "incomplete":
+            return f"{len(verification.get('open_tasks') or [])} task(s) still open"
         return f"exit {result['exit_code']}"
 
     @staticmethod
@@ -723,7 +726,7 @@ class MultiRepoImplementStep(StepBase):
                 if member.url:
                     entry["reason"] += (
                         f"; clone it from {member.url} with 'specify workflow "
-                        "run multi-repo-bootstrap'"
+                        "run multirepo-bootstrap'"
                     )
                 report[member.id] = entry
                 continue
@@ -774,7 +777,7 @@ class MultiRepoImplementStep(StepBase):
                 entry["reason"] = f"unknown integration {key!r}"
                 report[member.id] = entry
                 continue
-            if impl.build_exec_args("__speckit_multi_repo_probe__") is None:
+            if impl.build_exec_args("__speckit_multirepo_probe__") is None:
                 entry["status"] = "no-dispatch"
                 entry["reason"] = (
                     f"integration {key!r} does not support non-interactive "
@@ -974,15 +977,30 @@ class MultiRepoImplementStep(StepBase):
                 return result
             outcome = verify(f"after dispatch {attempt}")
             if outcome["status"] == "verified":
-                result["status"] = "completed"
-                set_status("verified")
-                return result
+                # Passing checks are not enough while the agent left tasks
+                # open: the member is not done, whatever its report says.
+                open_tasks = self._open_tasks(tasks_path)
+                if not open_tasks:
+                    result["status"] = "completed"
+                    set_status("verified")
+                    return result
+                outcome["status"] = "incomplete"
+                outcome["open_tasks"] = open_tasks
             feedback = write_feedback(
                 feedback_path, member.id, member.tasks_file, outcome, log_path
             )
 
-        failing = [c["name"] for c in result["verification"]["commands"] if c["status"] != "passed"]
         result["status"] = "failed"
+        open_tasks = result["verification"].get("open_tasks") or []
+        if result["verification"]["status"] == "incomplete":
+            result["error"] = (
+                f"checks passed but {len(open_tasks)} task(s) are still open after "
+                f"{result['attempts']} dispatch(es): {', '.join(open_tasks[:5])}"
+                f"{' …' if len(open_tasks) > 5 else ''} (tasks file: {member.tasks_file})"
+            )
+            set_status("incomplete")
+            return result
+        failing = [c["name"] for c in result["verification"]["commands"] if c["status"] != "passed"]
         result["error"] = (
             f"verification failed after {result['attempts']} dispatch(es): "
             f"{', '.join(failing)} (log: {log_path})"
@@ -1040,13 +1058,26 @@ class MultiRepoImplementStep(StepBase):
         return False
 
     @staticmethod
+    def _open_tasks(tasks_path: Path) -> list[str]:
+        """Open ``- [ ]`` task lines of the member task file (empty when unreadable)."""
+        try:
+            text = tasks_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            return []
+        return [
+            line.strip()[len("- [ ]"):].strip().split(" ", 1)[0]
+            for line in task_lines(text)
+            if re.match(r"^\s*[-*]\s+\[ \]", line)
+        ]
+
+    @staticmethod
     def _tasks_completed(tasks_path: Path) -> bool:
         """True when the member task file exists and every checkbox is checked."""
         try:
             text = tasks_path.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
             return False
-        marks = _CHECKBOX_RE.findall(text)
+        marks = [m.group("mark") for m in map(_CHECKBOX_RE.match, task_lines(text)) if m]
         return bool(marks) and all(mark != " " for mark in marks)
 
     @staticmethod
@@ -1199,7 +1230,7 @@ def write_governance_bundle(
     lines = [
         f"# Governance bundle — {member.id}",
         "",
-        "Assembled by the multi-repo orchestrator at dispatch time. Every layer",
+        "Assembled by the multirepo orchestrator at dispatch time. Every layer",
         "below applies to this member's implementation; when layers conflict, the",
         "most restrictive rule wins (each layer narrows the one above, never",
         "loosens it).",

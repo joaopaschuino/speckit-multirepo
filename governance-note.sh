@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Idempotently maintain the multi-repo governance section in a repository's
+# Idempotently maintain the multirepo governance section in a repository's
 # AGENTS.md. The section is the persistent channel that makes every agent
 # session in a member repository aware of the workspace constitution layers —
 # including free-form edits made after a dispatch, which bypass the
-# speckit.multi-repo.implement command entirely.
+# speckit.multirepo.implement command entirely.
 #
 # Usage: governance-note.sh <project-dir>
 #
@@ -25,9 +25,9 @@ cat > "$section" <<'EOF'
 <!-- SPECKIT-MULTI-REPO:GOVERNANCE START -->
 ## Multi-repo workspace governance
 
-This repository is a member of a Spec Kit multi-repo workspace. When working
+This repository is a member of a Spec Kit multirepo workspace. When working
 on a feature dispatched from the central specs repository (the directory in
-`SPECIFY_FEATURE_DIRECTORY`, or `/speckit.multi-repo.implement`), every rule
+`SPECIFY_FEATURE_DIRECTORY`, or `/speckit.multirepo.implement`), every rule
 in the workspace's constitution layers applies — including to later edits
 that touch that feature's work, not only to the initial dispatch:
 
@@ -39,7 +39,7 @@ that touch that feature's work, not only to the initial dispatch:
 
 When layers conflict, the most restrictive rule wins (each layer narrows the
 one above, never loosens it). When a governance bundle path is passed as the
-second argument of `/speckit.multi-repo.implement`, it assembles layers 1–3:
+second argument of `/speckit.multirepo.implement`, it assembles layers 1–3:
 read it fully instead of re-resolving the paths.
 <!-- SPECKIT-MULTI-REPO:GOVERNANCE END -->
 EOF

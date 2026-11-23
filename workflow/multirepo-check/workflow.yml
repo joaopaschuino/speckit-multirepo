@@ -1,8 +1,8 @@
 schema_version: "1.0"
 workflow:
-  id: "multi-repo-check"
+  id: "multirepo-check"
   name: "Multi-Repo Workspace Check"
-  version: "0.8.0"
+  version: "1.0.0"
   author: "Joao Victor"
   description: "Read-only workspace report: member readiness, integrations, constitutions, and dispatch waves — dispatches nothing"
 
@@ -17,6 +17,6 @@ inputs:
 
 steps:
   - id: check
-    type: multi-repo-implement
+    type: multirepo-implement
     dry_run: true
     feature: "{{ inputs.feature }}"

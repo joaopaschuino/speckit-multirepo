@@ -1,4 +1,4 @@
-# Tutorial: your first multi-repo feature
+# Tutorial: your first multirepo feature
 
 This walkthrough builds a minimal workspace from scratch — one central specs
 repository plus two member repositories — and takes a feature all the way
@@ -35,7 +35,7 @@ done
 ```
 
 Each member keeps the full standard Spec Kit command set installed; the
-multi-repo extension adds one more command to them (`speckit.multi-repo.implement`).
+multirepo extension adds one more command to them (`speckit.multirepo.implement`).
 
 ## 1. Install the extension
 
@@ -100,14 +100,14 @@ agent, with the most restrictive rule winning. A configured but missing (or
 unreadable) constitution file fails the run before any dispatch.
 
 > **Tip**: instead of writing the manifest by hand, run
-> `/speckit.multi-repo.workspace` in the central repo — it scans sibling
+> `/speckit.multirepo.workspace` in the central repo — it scans sibling
 > directories (and subdirectories, for mono-repos) for Spec Kit projects and proposes the manifest (you fill in
 > the `depends_on` graph), and audits an existing one afterwards. Verify
-> readiness at any time with `specify workflow run multi-repo-check` — a
+> readiness at any time with `specify workflow run multirepo-check` — a
 > read-only report of which members are ready, missing, or misconfigured.
 > To record *who talks to whom* (the manifest's `domain` and
-> `communicates_with`), run `/speckit.multi-repo.domain auto` for a full
-> scan of the members' code, or `/speckit.multi-repo.domain guided <member>`
+> `communicates_with`), run `/speckit.multirepo.domain auto` for a full
+> scan of the members' code, or `/speckit.multirepo.domain guided <member>`
 > to walk the flow from one piece while you add the business context.
 
 ## 3. Specify, plan, and generate tasks (central)
@@ -131,7 +131,7 @@ Approve the gates. You now have `central/specs/001-<slug>/` with `spec.md`,
 Still in the agent, run:
 
 ```
-/speckit.multi-repo.tasks
+/speckit.multirepo.tasks
 ```
 
 (The `after_tasks` hook offers this automatically right after
@@ -149,7 +149,7 @@ in the central slice or `contracts/`.
 Back in your shell, in `central/`:
 
 ```sh
-specify workflow run multi-repo
+specify workflow run multirepo
 ```
 
 What happens:
@@ -157,7 +157,7 @@ What happens:
 1. **confirm gate** — approve (interactive prompt).
 2. **implement step** — reads `workspace.yml`, finds members with a task
    file, computes waves (`[s3]` then `[lambda]`), and dispatches
-   `/speckit-multi-repo-implement tasks/s3.md` headlessly with
+   `/speckit-multirepo-implement tasks/s3.md` headlessly with
    `cwd=repo-s3`, then the same for `lambda` after s3 succeeds. Each
    member's agent reads the central spec/plan and implements **its own
    repository**, marking checkboxes in its central task file.
@@ -166,7 +166,7 @@ What happens:
 Non-interactive (CI):
 
 ```sh
-specify workflow run multi-repo \
+specify workflow run multirepo \
   -i feature=specs/001-<slug> -i confirm=approve -i review=approve --json
 ```
 
@@ -198,7 +198,7 @@ reset --hard` to drop its changes but keep its task file unchecked), or make
 its dispatch fail, then re-run:
 
 ```sh
-specify workflow run multi-repo          # s3 completes, lambda fails → run fails
+specify workflow run multirepo          # s3 completes, lambda fails → run fails
 # fix whatever broke lambda...
 specify workflow resume <run-id>         # re-dispatches only what's left
 ```
@@ -212,7 +212,7 @@ The dispatched command also works standalone. Open your agent inside
 `repo-lambda/` and run:
 
 ```
-/speckit-multi-repo-implement
+/speckit-multirepo-implement
 ```
 
 It asks which task file to implement (or takes it from the extension config
@@ -228,7 +228,7 @@ orchestrator.
 | `Member validation failed ... not a Spec Kit project` | Member missing `.specify/` — run `specify init` in it |
 | `Member validation failed ... no integration configured` | Member has no `integration.json` — init with `--integration`, or set `integration:` in `workspace.yml` |
 | `Member validation failed ... does not support non-interactive CLI dispatch` | That agent has no headless mode; pick another integration for the member |
-| `No workspace members participate in this feature` | No `tasks/<member>.md` under the feature directory — run `/speckit.multi-repo.tasks` |
+| `No workspace members participate in this feature` | No `tasks/<member>.md` under the feature directory — run `/speckit.multirepo.tasks` |
 | `Feature directory not found` | Bad `feature` input — pass `-i feature=specs/001-<slug>` |
 | Agent starts then fails on permissions | Set the integration's extra-args env var (see step 5 note) |
 | Dispatch order looks wrong | Waves come from `depends_on` in `workspace.yml` — the tasks.md table is only a mirror |
@@ -240,4 +240,4 @@ orchestrator.
 - The automated version of this tutorial: `tests/test_e2e_workflow.py`
 - Once a real feature has flown through the workspace, collect your metrics
   (integration rework, spec→PR time) — they are the evidence for proposing
-  multi-repo support upstream in Spec Kit
+  multirepo support upstream in Spec Kit

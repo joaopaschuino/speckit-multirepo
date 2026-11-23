@@ -1,4 +1,4 @@
-"""Objective verification for the multi-repo orchestrator.
+"""Objective verification for the multirepo orchestrator.
 
 A member task file may carry a ``## Verification`` section listing POSIX
 commands the orchestrator runs in the member repository after the member's
@@ -43,7 +43,7 @@ RESULT_LOG_TAIL = 2000
 _SECTION_RE = re.compile(r"^##\s+Verification\s*$", re.IGNORECASE | re.MULTILINE)
 _NEXT_HEADING_RE = re.compile(r"^#{1,2}\s", re.MULTILINE)
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-_FENCE_RE = re.compile(r"^\s*(```|~~~).*?^\s*\1\s*$", re.DOTALL | re.MULTILINE)
+_FENCE_OPEN_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)")
 _COMMAND_LINE_RE = re.compile(
     r"^\s*[-*]\s+(?:(?P<name>[^`:\n]+?):\s*)?(?P<tick>`+)(?P<command>.+?)(?P=tick)(?P<rest>.*)$"
 )
@@ -79,7 +79,7 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     following = _NEXT_HEADING_RE.search(body)
     if following is not None:
         body = body[: following.start()]
-    body = _FENCE_RE.sub("", _COMMENT_RE.sub("", body))
+    body = _strip_fences(_COMMENT_RE.sub("", body))
 
     commands: list[VerificationCommand] = []
     for line in body.splitlines():
@@ -101,9 +101,66 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     return commands
 
 
+def _fence_opener(line: str) -> re.Match[str] | None:
+    """Match a fence opener, or None for a line that merely looks like one.
+
+    CommonMark: fences are indented at most 3 spaces, and the info string of
+    a backtick fence may not contain a backtick — so a paragraph starting
+    with an inline ```code``` span does not open a block.
+    """
+    match = _FENCE_OPEN_RE.match(line)
+    if match is None:
+        return None
+    if match.group("fence")[0] == "`" and "`" in match.group("info"):
+        return None
+    return match
+
+
+def _strip_fences(text: str) -> str:
+    """Drop fenced code blocks (CommonMark-style) from *text*.
+
+    A block opens with 3+ backticks or tildes and closes only on a line made
+    of the same character, at least as long as the opener — so a ````
+    block can contain ``` fences. An unclosed block is kept as text: hiding
+    the rest of the file could hide real tasks.
+    """
+    out: list[str] = []
+    pending: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines(keepends=True):
+        match = _FENCE_OPEN_RE.match(line)
+        if fence is None:
+            opener = _fence_opener(line)
+            if opener:
+                fence = opener.group("fence")
+                pending = [line]
+            else:
+                out.append(line)
+            continue
+        pending.append(line)
+        if (
+            match
+            and line.strip() == match.group("fence")
+            and match.group("fence")[0] == fence[0]
+            and len(match.group("fence")) >= len(fence)
+        ):
+            fence = None
+            pending = []
+    out.extend(pending)
+    return "".join(out)
+
+
+def task_lines(text: str) -> list[str]:
+    """Lines of a task file outside HTML comments and fenced code blocks.
+
+    Checkboxes inside those are examples, not tasks.
+    """
+    return _strip_fences(_COMMENT_RE.sub("", text)).splitlines()
+
+
 def has_task_checkboxes(text: str) -> bool:
     """True when the task file lists at least one ``- [ ]``/``- [x]`` task."""
-    return _CHECKBOX_RE.search(text) is not None
+    return any(_CHECKBOX_RE.match(line) for line in task_lines(text))
 
 
 def is_marked_ready(text: str) -> bool:
@@ -318,13 +375,26 @@ def write_feedback(
     log_path: Path,
 ) -> Path:
     """Write the retry feedback file handed to the member's next dispatch."""
+    any_failed = any(c["status"] != "passed" for c in verification["commands"])
+    if any_failed:
+        intro = [
+            "The multirepo orchestrator ran the objective checks from the",
+            f"`## Verification` section of `{tasks_file}` in this repository after",
+            f"the previous attempt ({verification['label']}), and some failed.",
+            "Fix the implementation so every check exits with its expected code.",
+        ]
+    else:
+        intro = [
+            "All checks passed, but tasks remain open. The multirepo orchestrator",
+            f"ran the objective checks from the `## Verification` section of `{tasks_file}`",
+            f"in this repository after the previous attempt ({verification['label']}),",
+            "and every one exited with its expected code; the open tasks below are",
+            "why this member is dispatched again.",
+        ]
     lines = [
         f"# Verification feedback — {member_id}",
         "",
-        "The multi-repo orchestrator ran the objective checks from the",
-        f"`## Verification` section of `{tasks_file}` in this repository after",
-        f"the previous attempt ({verification['label']}), and some failed.",
-        "Fix the implementation so every check exits with its expected code.",
+        *intro,
         "Do not edit or weaken the `## Verification` section, and do not",
         "uncheck completed tasks.",
         "",
@@ -350,6 +420,18 @@ def write_feedback(
                 "```",
             ]
         )
+    open_tasks = verification.get("open_tasks") or []
+    if open_tasks:
+        lines.extend(
+            [
+                "",
+                f"## Open tasks — {len(open_tasks)} still unchecked in `{tasks_file}`",
+                "",
+                "Every check passed, but the member is done only when every task is",
+                "done. Finish these (and check them off), or report why one cannot",
+                f"be done: {', '.join(open_tasks)}.",
+            ]
+        )
     passed = [c["name"] for c in verification["commands"] if c["status"] == "passed"]
     if passed:
         lines.extend(["", f"Checks already passing: {', '.join(passed)}."])
@@ -362,7 +444,7 @@ def update_orchestration_status(tasks_md: Path, member_id: str, status: str) -> 
     """Set *member_id*'s Status cell in the orchestration page table.
 
     The table is the one whose header row names both a ``Member`` and a
-    ``Status`` column (written by ``/speckit.multi-repo.tasks``). Only that
+    ``Status`` column (written by ``/speckit.multirepo.tasks``). Only that
     cell changes; the rest of the file is preserved byte for byte. Returns
     ``True`` when a row was updated. Missing files, missing tables, and
     unknown members are a silent no-op: the page is a human-readable mirror,

@@ -1,6 +1,6 @@
 step:
-  type_key: multi-repo-implement
+  type_key: multirepo-implement
   name: "Multi-Repo Implement"
-  version: "0.8.0"
+  version: "1.0.0"
   description: "Dispatch implementation of a centrally-specified feature to workspace member repositories in dependency order"
   author: "Joao Victor"

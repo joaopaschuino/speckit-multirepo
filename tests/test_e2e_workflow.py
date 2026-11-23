@@ -31,7 +31,9 @@ def fake_agent(tmp_path, monkeypatch):
     Appends one record per invocation to $FAKE_AGENT_LOG and exits 1 when a
     ``fail-agent`` sentinel file exists in the working directory. With a
     ``fix-on-feedback`` sentinel, a retry dispatch (verification feedback
-    file among the args) creates ``fixed``; ``hang-agent`` makes it start a
+    file among the args) creates ``fixed``. A successful run checks off the
+    tasks of the dispatched task file, unless a ``leave-open`` sentinel
+    exists; ``hang-agent`` makes it start a
     background child that writes ``late-write`` after 4s, then hang.
     """
     log = tmp_path / "agent-log.jsonl"
@@ -55,6 +57,11 @@ def fake_agent(tmp_path, monkeypatch):
         "fi\n"
         "if [ -f fail-agent ]; then\n"
         "  exit 1\n"
+        "fi\n"
+        "tf=$(printf '%s' \"$*\" | grep -o 'tasks/[A-Za-z0-9_.-]*[.]md' | head -n 1)\n"
+        "f=\"${SPECIFY_FEATURE_DIRECTORY:-}/$tf\"\n"
+        "if [ -n \"$tf\" ] && [ -f \"$f\" ] && [ ! -f leave-open ]; then\n"
+        "  sed 's/^\\([[:space:]]*[-*][[:space:]]*\\)\\[ \\]/\\1[X]/' \"$f\" > \"$f.tmp\" && mv \"$f.tmp\" \"$f\"\n"
         "fi\n"
         "exit 0\n",
         encoding="utf-8",
@@ -122,10 +129,10 @@ def read_run_state(central: Path) -> dict:
 def install_components():
     """Install the step and the workflows through the real CLI."""
     result = invoke_specify(
-        ["workflow", "step", "add", "multi-repo-implement", "--dev", str(PACKAGE_ROOT / "step" / "multi-repo-implement")]
+        ["workflow", "step", "add", "multirepo-implement", "--dev", str(PACKAGE_ROOT / "step" / "multirepo-implement")]
     )
     assert result.exit_code == 0, result.output
-    for name in ("multi-repo", "multi-repo-check", "multi-repo-bootstrap"):
+    for name in ("multirepo", "multirepo-check", "multirepo-bootstrap"):
         result = invoke_specify(
             ["workflow", "add", str(PACKAGE_ROOT / "workflow" / name), "--dev"]
         )
@@ -140,9 +147,11 @@ def test_install_run_and_resume(central):
 
     # -- first run: lambda fails (sentinel), run fails ---------------------
     (lambda_repo / "fail-agent").write_text("", encoding="utf-8")
+    # s3 (no Verification section) leaves its task open, so resume re-runs it.
+    (root / "repo-s3" / "leave-open").write_text("", encoding="utf-8")
     result = invoke_specify(
         [
-            "workflow", "run", "multi-repo",
+            "workflow", "run", "multirepo",
             "-i", "confirm=approve",
             "-i", "review=approve",
             "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -161,8 +170,8 @@ def test_install_run_and_resume(central):
     s3_call = log[0]
     assert s3_call["cwd"] == str(root / "repo-s3")
     # claude is a skills integration: the extension command's native
-    # invocation form is the hyphenated /speckit-multi-repo-implement.
-    assert "/speckit-multi-repo-implement" in s3_call["args"]
+    # invocation form is the hyphenated /speckit-multirepo-implement.
+    assert "/speckit-multirepo-implement" in s3_call["args"]
     assert "tasks/s3.md" in s3_call["args"]
     assert s3_call["feature"] == str(feature)
     assert s3_call["no_persist"] == "1"
@@ -196,13 +205,13 @@ def test_install_run_and_resume(central):
         assert "governance/lambda.md" in lambda_call["args"]
 
 
-def test_multi_repo_check_reports_without_dispatch(central):
+def test_multirepo_check_reports_without_dispatch(central):
     """The check workflow reports readiness and waves, dispatching nothing."""
     root, feature, _lambda_repo = central
     install_components()
 
     result = invoke_specify(
-        ["workflow", "run", "multi-repo-check", "-i", f"feature={feature.relative_to(root).as_posix()}"]
+        ["workflow", "run", "multirepo-check", "-i", f"feature={feature.relative_to(root).as_posix()}"]
     )
     assert result.exit_code == 0, result.output
 
@@ -235,7 +244,7 @@ def test_missing_skip_dispatches_ready_members(central):
 
     result = invoke_specify(
         [
-            "workflow", "run", "multi-repo",
+            "workflow", "run", "multirepo",
             "-i", "confirm=approve",
             "-i", "review=approve",
             "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -268,7 +277,7 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     """The extension manifest validates and its commands reach the member.
 
     Members are claude (skills) projects, so the extension commands register
-    as .claude/skills/speckit-multi-repo-<name> — the exact invocation the
+    as .claude/skills/speckit-multirepo-<name> — the exact invocation the
     orchestrator step dispatches. The member is bootstrapped with the real
     ``specify init`` because command registration needs the integration's
     installed artifacts.
@@ -286,21 +295,23 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     )
     assert result.exit_code == 0, result.output
 
-    assert (member / ".specify" / "extensions" / "multi-repo" / "extension.yml").is_file()
+    assert (member / ".specify" / "extensions" / "multirepo" / "extension.yml").is_file()
     skills = member / ".claude" / "skills"
-    assert (skills / "speckit-multi-repo-implement").exists()
-    assert (skills / "speckit-multi-repo-tasks").exists()
-    assert (skills / "speckit-multi-repo-help").exists()
-    assert (skills / "speckit-multi-repo-domain").exists()
-    assert (skills / "speckit-multi-repo-reverse").exists()
+    assert (skills / "speckit-multirepo-implement").exists()
+    assert (skills / "speckit-multirepo-tasks").exists()
+    assert (skills / "speckit-multirepo-help").exists()
+    assert (skills / "speckit-multirepo-domain").exists()
+    assert (skills / "speckit-multirepo-reverse").exists()
+    assert (skills / "speckit-multirepo-orchestrate").exists()
+    assert not list(skills.glob("speckit-multi-repo-*"))
     hooks = (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
     assert "after_tasks" in hooks
-    assert "speckit.multi-repo.tasks" in hooks
+    assert "speckit.multirepo.tasks" in hooks
 
 
-def run_multi_repo(root, feature, *extra):
+def run_multirepo(root, feature, *extra):
     argv = [
-        "workflow", "run", "multi-repo",
+        "workflow", "run", "multirepo",
         "-i", "confirm=approve",
         "-i", "review=approve",
         "-i", f"feature={feature.relative_to(root).as_posix()}",
@@ -334,7 +345,7 @@ def test_verification_retry_status_and_review_gate(central):
     )
     (lambda_repo / "fix-on-feedback").write_text("", encoding="utf-8")
 
-    result = run_multi_repo(root, feature, "verify_retries=1")
+    result = run_multirepo(root, feature, "verify_retries=1")
     assert result.exit_code == 0, result.output
 
     log = read_agent_log(Path(os.environ["FAKE_AGENT_LOG"]))
@@ -374,7 +385,7 @@ def test_verification_failure_fails_run_without_retries(central):
         "- [ ] s3 task\n\n## Verification\n\n- test: `exit 1`\n", encoding="utf-8"
     )
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 1, result.output
 
     assert len(read_agent_log(Path(os.environ["FAKE_AGENT_LOG"]))) == 1  # default: no retry
@@ -394,7 +405,7 @@ def test_sequential_dispatch_timeout_kills_hung_agent(central):
     (root / "repo-s3" / "hang-agent").write_text("", encoding="utf-8")
 
     started = time.monotonic()
-    result = run_multi_repo(root, feature, "dispatch_timeout=2")
+    result = run_multirepo(root, feature, "dispatch_timeout=2")
     assert time.monotonic() - started < 25
     assert result.exit_code == 1, result.output
 
@@ -431,7 +442,7 @@ def test_contract_check_member_runs_after_producer(central):
         encoding="utf-8",
     )
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 0, result.output
 
     output = read_run_state(root)["step_results"]["implement"]["output"]
@@ -475,7 +486,7 @@ def test_monorepo_members_are_subdirectories(tmp_path, fake_agent, monkeypatch):
     monkeypatch.chdir(root)
     install_components()
 
-    result = run_multi_repo(root, feature)
+    result = run_multirepo(root, feature)
     assert result.exit_code == 0, result.output
 
     output = read_run_state(root)["step_results"]["implement"]["output"]
@@ -490,7 +501,7 @@ def test_monorepo_members_are_subdirectories(tmp_path, fake_agent, monkeypatch):
     assert all(r["feature"] == str(feature) for r in log)
 
 
-def test_multi_repo_bootstrap_clones_missing_members(central, tmp_path):
+def test_multirepo_bootstrap_clones_missing_members(central, tmp_path):
     """The bootstrap workflow clones an absent member from its manifest url."""
     import subprocess
 
@@ -512,7 +523,7 @@ def test_multi_repo_bootstrap_clones_missing_members(central, tmp_path):
     )
     install_components()
 
-    result = invoke_specify(["workflow", "run", "multi-repo-bootstrap"])
+    result = invoke_specify(["workflow", "run", "multirepo-bootstrap"])
     assert result.exit_code == 0, result.output
 
     assert (root / "members" / "glue" / "README.md").is_file()

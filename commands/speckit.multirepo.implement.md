@@ -12,11 +12,11 @@ scripts:
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty). When this command is dispatched by the multi-repo orchestrator, `$ARGUMENTS` contains the member's tasks file path **relative to the feature directory** (for example `tasks/lambda.md`) followed by the **absolute path to this member's governance bundle** — one file the orchestrator assembled from every constitution layer that exists. Read that bundle in full during the Governance step and treat it as authoritative. On a **retry** a third token is present: the absolute path to a **verification feedback** file listing the objective checks that failed after the previous attempt, with their output — read it first and make those checks pass (see Validation).
+You **MUST** consider the user input before proceeding (if not empty). When this command is dispatched by the multirepo orchestrator, `$ARGUMENTS` contains the member's tasks file path **relative to the feature directory** (for example `tasks/lambda.md`) followed by the **absolute path to this member's governance bundle** — one file the orchestrator assembled from every constitution layer that exists. Read that bundle in full during the Governance step and treat it as authoritative. On a **retry** a third token is present: the absolute path to a **verification feedback** file listing the objective checks that failed after the previous attempt, with their output — read it first and make those checks pass (see Validation).
 
 ## Purpose
 
-This repository is a **member** of a multi-repo workspace. The active feature is specified in a **central specs repository**: `FEATURE_DIR` (resolved below) points into that central repository, not this one. You implement code **in this repository only**, following the member's task file from the central feature directory.
+This repository is a **member** of a multirepo workspace. The active feature is specified in a **central specs repository**: `FEATURE_DIR` (resolved below) points into that central repository, not this one. You implement code **in this repository only**, following the member's task file from the central feature directory.
 
 ## Pre-Execution Checks
 
@@ -60,13 +60,13 @@ This repository is a **member** of a multi-repo workspace. The active feature is
 2. **Resolve TASKS_FILE**, in this priority order:
    - `$ARGUMENTS` if non-empty (a path relative to FEATURE_DIR, e.g. `tasks/lambda.md`)
    - the `SPECKIT_MULTI_REPO_TASKS_FILE` environment variable
-   - `implement.tasks_file` in `.specify/extensions/multi-repo/multi-repo-config.yml`, if set
+   - `implement.tasks_file` in `.specify/extensions/multirepo/multirepo-config.yml`, if set
    - otherwise, ask the user which member task file to implement (interactive only)
 
    Then verify `FEATURE_DIR/TASKS_FILE` exists. If it does not, **STOP** with:
-   `Member task file not found: FEATURE_DIR/TASKS_FILE. Run /speckit.multi-repo.tasks in the central specs repository to split tasks across members.`
+   `Member task file not found: FEATURE_DIR/TASKS_FILE. Run /speckit.multirepo.tasks in the central specs repository to split tasks across members.`
 
-   Do **not** fall back to the feature's root `tasks.md`: in a multi-repo workspace that file is an orchestration page, not this member's work list.
+   Do **not** fall back to the feature's root `tasks.md`: in a multirepo workspace that file is an orchestration page, not this member's work list.
 
 3. Load and analyze the implementation context:
    - **REQUIRED**: Read `FEATURE_DIR/spec.md` for the feature requirements

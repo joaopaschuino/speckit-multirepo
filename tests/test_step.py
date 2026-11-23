@@ -1,4 +1,4 @@
-"""Tests for the multi-repo-implement workflow step."""
+"""Tests for the multirepo-implement workflow step."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def workspace_setup(tmp_path):
     return central, members, feature
 
 
-def patch_integration(monkeypatch, calls, fail_repos=None):
+def patch_integration(monkeypatch, calls, fail_repos=None, leave_open=None):
     """Point get_integration at a FakeIntegration.
 
     The step imports get_integration lazily inside its methods, so patching
@@ -49,7 +49,7 @@ def patch_integration(monkeypatch, calls, fail_repos=None):
     """
     import specify_cli.integrations as integrations_module
 
-    fake = FakeIntegration(calls, fail_repos)
+    fake = FakeIntegration(calls, fail_repos, leave_open)
     monkeypatch.setattr(integrations_module, "get_integration", lambda key: fake)
 
 
@@ -66,7 +66,7 @@ def test_execute_dispatches_in_waves(workspace_setup, step_module, monkeypatch, 
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "implement", "type": "multi-repo-implement"}, make_context(step_module, central)
+        {"id": "implement", "type": "multirepo-implement"}, make_context(step_module, central)
     )
 
     assert result.status == step_module.StepStatus.COMPLETED
@@ -76,7 +76,7 @@ def test_execute_dispatches_in_waves(workspace_setup, step_module, monkeypatch, 
     assert result.output["failed"] == []
     assert [c["member"] for c in dispatch_calls] == [S3, LAMBDA]  # dependency order
     for call in dispatch_calls:
-        assert call["command"] == "speckit.multi-repo.implement"
+        assert call["command"] == "speckit.multirepo.implement"
         assert call["project_root"] == str(members[call["member"].removeprefix("repo-")])
         assert call["args"].startswith("tasks/")
         assert call["stream"] is True  # sequential waves stream live output
@@ -93,7 +93,7 @@ def test_execute_feature_from_config_and_env(workspace_setup, step_module, monke
     # Explicit 'feature' setting wins over the environment.
     monkeypatch.setenv("SPECIFY_FEATURE_DIRECTORY", "/nonexistent/from-env")
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
     assert result.status == step_module.StepStatus.COMPLETED
@@ -101,7 +101,7 @@ def test_execute_feature_from_config_and_env(workspace_setup, step_module, monke
     # Environment fallback with an absolute central feature path.
     monkeypatch.setenv("SPECIFY_FEATURE_DIRECTORY", str(central / "specs" / "001-demo"))
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement"}, make_context(step_module, central)
+        {"id": "i", "type": "multirepo-implement"}, make_context(step_module, central)
     )
     assert result.status == step_module.StepStatus.COMPLETED
 
@@ -131,7 +131,7 @@ def test_execute_exports_feature_env_and_restores(
     )
 
     step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -167,7 +167,7 @@ def test_execute_persist_feature_removes_no_persist(
     step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "persist_feature": True,
         },
@@ -183,7 +183,7 @@ def test_execute_repos_subset(workspace_setup, step_module, monkeypatch, dispatc
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo", "repos": ["lambda"]},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo", "repos": ["lambda"]},
         make_context(step_module, central),
     )
 
@@ -200,7 +200,7 @@ def test_execute_skip_completed(workspace_setup, step_module, monkeypatch, dispa
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -215,7 +215,7 @@ def test_execute_stop_on_failure(workspace_setup, step_module, monkeypatch, disp
     patch_integration(monkeypatch, dispatch_calls, fail_repos={S3: 1})
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -233,7 +233,7 @@ def test_execute_continue_on_failure(workspace_setup, step_module, monkeypatch, 
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "stop_on_failure": False,
         },
@@ -258,7 +258,7 @@ def test_execute_parallel_wave_uses_captured_dispatch(
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "repos": ["s3", "glue"],  # independent => same wave
             "max_concurrency": 2,
@@ -279,7 +279,7 @@ def test_execute_invalid_member_blocks_all(workspace_setup, step_module, monkeyp
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -294,7 +294,7 @@ def test_execute_unknown_repo_in_config(workspace_setup, step_module, monkeypatc
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo", "repos": ["ghost"]},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo", "repos": ["ghost"]},
         make_context(step_module, central),
     )
 
@@ -309,7 +309,7 @@ def test_execute_no_feature(workspace_setup, step_module, monkeypatch, dispatch_
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement"}, make_context(step_module, central)
+        {"id": "i", "type": "multirepo-implement"}, make_context(step_module, central)
     )
 
     assert result.status == step_module.StepStatus.FAILED
@@ -322,7 +322,7 @@ def test_execute_no_participants(workspace_setup, step_module, monkeypatch, disp
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": str(empty_feature)},
+        {"id": "i", "type": "multirepo-implement", "feature": str(empty_feature)},
         make_context(step_module, central),
     )
 
@@ -333,7 +333,7 @@ def test_execute_no_participants(workspace_setup, step_module, monkeypatch, disp
 def test_execute_missing_workspace(tmp_path, step_module, monkeypatch, dispatch_calls):
     patch_integration(monkeypatch, dispatch_calls)
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement"}, make_context(step_module, tmp_path)
+        {"id": "i", "type": "multirepo-implement"}, make_context(step_module, tmp_path)
     )
     assert result.status == step_module.StepStatus.FAILED
     assert "workspace manifest" in (result.error or "").lower()
@@ -357,7 +357,7 @@ def test_execute_member_constitution_in_args(tmp_path, step_module, monkeypatch,
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -402,7 +402,7 @@ def test_execute_parallel_members_get_their_own_constitution(
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "max_concurrency": 2,
         },
@@ -440,7 +440,7 @@ def test_execute_governance_bundle_assembles_all_layers(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -467,7 +467,7 @@ def test_execute_governance_bundle_without_any_layers(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -493,7 +493,7 @@ def test_execute_template_constitution_is_reported_absent(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -521,7 +521,7 @@ def test_execute_unreadable_constitution_blocks_dispatch(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -547,7 +547,7 @@ def test_execute_unwritable_bundle_fails_that_member(
     patch_integration(monkeypatch, dispatch_calls)
     try:
         result = step_module.MultiRepoImplementStep().execute(
-            {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+            {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
             make_context(step_module, central),
         )
 
@@ -573,7 +573,7 @@ def test_execute_missing_constitution_blocks_dispatch(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -608,7 +608,7 @@ def test_execute_dry_run_reports_without_dispatch(
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "dry_run": True,
         },
@@ -658,7 +658,7 @@ def test_execute_dry_run_without_feature_reports_whole_workspace(
     monkeypatch.delenv("SPECIFY_FEATURE_DIRECTORY", raising=False)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "dry_run": True},
+        {"id": "i", "type": "multirepo-implement", "dry_run": True},
         make_context(step_module, central),
     )
 
@@ -689,7 +689,7 @@ def test_execute_missing_skip_dispatches_ready_and_reports_missing(
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "missing": "skip",
         },
@@ -727,7 +727,7 @@ def test_execute_missing_skip_still_fails_on_config_errors(
     result = step_module.MultiRepoImplementStep().execute(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "specs/001-demo",
             "missing": "skip",
         },
@@ -752,7 +752,7 @@ def test_execute_uncloned_participant_fails_by_default(
     patch_integration(monkeypatch, dispatch_calls)
 
     result = step_module.MultiRepoImplementStep().execute(
-        {"id": "i", "type": "multi-repo-implement", "feature": "specs/001-demo"},
+        {"id": "i", "type": "multirepo-implement", "feature": "specs/001-demo"},
         make_context(step_module, central),
     )
 
@@ -763,7 +763,7 @@ def test_execute_uncloned_participant_fails_by_default(
 
 def test_validate_missing_and_dry_run_settings(step_module):
     errors = step_module.MultiRepoImplementStep().validate(
-        {"id": "i", "type": "multi-repo-implement", "missing": "bogus", "dry_run": 3}
+        {"id": "i", "type": "multirepo-implement", "missing": "bogus", "dry_run": 3}
     )
     assert any("'missing' must be 'error' or 'skip'" in e for e in errors)
     assert any("'dry_run' must be" in e for e in errors)
@@ -772,13 +772,13 @@ def test_validate_missing_and_dry_run_settings(step_module):
     assert step_module.MultiRepoImplementStep().validate(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "missing": "{{ inputs.missing }}",
             "dry_run": "{{ inputs.dry_run }}",
         }
     ) == []
     assert step_module.MultiRepoImplementStep().validate(
-        {"id": "i", "type": "multi-repo-implement", "missing": "skip", "dry_run": True}
+        {"id": "i", "type": "multirepo-implement", "missing": "skip", "dry_run": True}
     ) == []
 
 
@@ -786,7 +786,7 @@ def test_validate_reports_config_errors(step_module):
     errors = step_module.MultiRepoImplementStep().validate(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "bogus": True,
             "repos": "lambda",
             "max_concurrency": True,
@@ -803,12 +803,12 @@ def test_validate_reports_config_errors(step_module):
 
 def test_validate_accepts_minimal_and_expression_configs(step_module):
     assert step_module.MultiRepoImplementStep().validate(
-        {"id": "i", "type": "multi-repo-implement"}
+        {"id": "i", "type": "multirepo-implement"}
     ) == []
     assert step_module.MultiRepoImplementStep().validate(
         {
             "id": "i",
-            "type": "multi-repo-implement",
+            "type": "multirepo-implement",
             "feature": "{{ inputs.feature }}",
             "max_concurrency": 3,
             "skip_completed": False,
@@ -836,8 +836,8 @@ def verified_tasks(*commands: str) -> str:
 class ScriptedIntegration(FakeIntegration):
     """FakeIntegration with a per-member side effect run on each dispatch."""
 
-    def __init__(self, calls, effects):
-        super().__init__(calls)
+    def __init__(self, calls, effects, leave_open=None):
+        super().__init__(calls, leave_open=leave_open)
         self._effects = effects
 
     def dispatch_command(self, command_name, args="", *, project_root=None, **kwargs):
@@ -848,16 +848,16 @@ class ScriptedIntegration(FakeIntegration):
         return result
 
 
-def patch_scripted(monkeypatch, calls, effects):
+def patch_scripted(monkeypatch, calls, effects, leave_open=None):
     import specify_cli.integrations as integrations_module
 
-    fake = ScriptedIntegration(calls, effects)
+    fake = ScriptedIntegration(calls, effects, leave_open)
     monkeypatch.setattr(integrations_module, "get_integration", lambda key: fake)
 
 
 def run_step(step_module, central, feature, **config):
     return step_module.MultiRepoImplementStep().execute(
-        {"id": "implement", "type": "multi-repo-implement", "feature": str(feature), **config},
+        {"id": "implement", "type": "multirepo-implement", "feature": str(feature), **config},
         make_context(step_module, central),
     )
 
@@ -962,6 +962,8 @@ def test_verification_failure_retries_with_feedback(
     assert len(s3_calls[0]["args"].split(" ")) == 2
     assert s3_calls[1]["args"].endswith("verification/s3.feedback.md")
     assert "## unit — exit 2, expected 0" in feedback_seen[0]
+    assert "and some failed" in feedback_seen[0]
+    assert "All checks passed" not in feedback_seen[0]
     assert "fixed missing" in feedback_seen[0]
     assert "Checks already passing: lint." in feedback_seen[0]
     assert "| s3 | tasks/s3.md | — | verified |" in (feature / "tasks.md").read_text(
@@ -1227,10 +1229,10 @@ def test_update_orchestration_status_preserves_page(step_module, tmp_path):
 def test_validate_rejects_bad_verify_retries(step_module):
     step = step_module.MultiRepoImplementStep()
     for bad in (-1, "two", True, 1.5):
-        errors = step.validate({"id": "implement", "type": "multi-repo-implement", "verify_retries": bad})
+        errors = step.validate({"id": "implement", "type": "multirepo-implement", "verify_retries": bad})
         assert any("verify_retries" in e for e in errors), bad
     for good in (0, 3, "{{ inputs.verify_retries }}"):
-        errors = step.validate({"id": "implement", "type": "multi-repo-implement", "verify_retries": good})
+        errors = step.validate({"id": "implement", "type": "multirepo-implement", "verify_retries": good})
         assert not any("verify_retries" in e for e in errors), good
 
 
@@ -1341,3 +1343,116 @@ def test_watchdog_kills_descendants_in_another_session(step_module, tmp_path):
             )
     time.sleep(2.5)
     assert not (tmp_path / "late-write").exists()
+
+
+def test_passing_checks_with_open_tasks_are_incomplete(
+    workspace_setup, step_module, monkeypatch, dispatch_calls
+):
+    """Exit codes alone do not make a member verified while tasks stay open."""
+    central, members, feature = workspace_setup
+    (feature / "tasks.md").write_text(ORCHESTRATION_PAGE, encoding="utf-8")
+    (feature / "tasks" / "s3.md").write_text(verified_tasks("test: `true`"), encoding="utf-8")
+    patch_integration(monkeypatch, dispatch_calls, leave_open={S3})
+
+    result = run_step(step_module, central, feature, verify_retries=1)
+
+    assert result.status == step_module.StepStatus.FAILED
+    assert "s3 (1 task(s) still open)" in result.error
+    s3 = {r["repo"]: r for r in result.output["results"]}["s3"]
+    assert s3["status"] == "failed"
+    assert s3["attempts"] == 2
+    assert s3["verification"]["status"] == "incomplete"
+    assert s3["verification"]["open_tasks"] == ["T001"]
+    assert "checks passed but 1 task(s) are still open after 2 dispatch(es): T001" in s3["error"]
+    feedback = (feature / "verification" / "s3.feedback.md").read_text(encoding="utf-8")
+    assert "Open tasks — 1 still unchecked" in feedback and "T001" in feedback
+    assert "All checks passed, but tasks remain open" in feedback
+    assert "and some failed" not in feedback
+    assert dispatch_calls[1]["args"].endswith("s3.feedback.md")
+    assert result.output["verification"] == {"s3": "incomplete"}
+    assert "incomplete: s3" in result.output["verification_summary"]
+    assert "| s3 | tasks/s3.md | — | incomplete |" in (feature / "tasks.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_checkboxes_in_examples_are_not_tasks(step_module, tmp_path):
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "- [X] T001 implement\n"
+        "<!-- - [ ] T900 template example -->\n"
+        "```markdown\n- [ ] T901 fenced example\n```\n",
+        encoding="utf-8",
+    )
+    step = step_module.MultiRepoImplementStep
+    assert step._open_tasks(tasks) == []
+    assert step._tasks_completed(tasks) is True
+    tasks.write_text(tasks.read_text(encoding="utf-8") + "- [ ] T002 real\n", encoding="utf-8")
+    assert step._open_tasks(tasks) == ["T002"]
+    assert step._tasks_completed(tasks) is False
+
+
+def test_mixed_width_fences_do_not_hide_tasks(step_module, tmp_path):
+    """A ```` block closes only on a ```` line, not on the next ``` fence."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "````markdown\n```bash\n- [ ] T900 nested example\n```\n````\n"
+        "- [ ] T010 real\n"
+        "```bash\nnpm test\n```\n",
+        encoding="utf-8",
+    )
+    step = step_module.MultiRepoImplementStep
+    assert step._open_tasks(tasks) == ["T010"]
+
+
+def test_unclosed_fence_keeps_tasks(step_module, tmp_path):
+    tasks = tmp_path / "s3.md"
+    tasks.write_text("```bash\n- [ ] T011 after an unclosed fence\n", encoding="utf-8")
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T011"]
+
+
+def test_indented_fence_does_not_close_block(step_module, tmp_path):
+    """A longer fence indented 4+ spaces is content, not a closing fence."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "```\nexample:\n    ````\n- [ ] T900 still inside\n```\n- [ ] T001 real\n",
+        encoding="utf-8",
+    )
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T001"]
+
+
+def test_inline_code_span_is_not_a_fence(step_module, tmp_path):
+    """A line starting with an inline ```code``` span opens no block."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "``` `cmd` ``` renders inline.\n- [ ] T001 real\n"
+        "````\n- [ ] T900 example\n````\n- [ ] T002 real\n",
+        encoding="utf-8",
+    )
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T001", "T002"]
+
+
+def test_open_tasks_closed_on_retry_are_verified(
+    workspace_setup, step_module, monkeypatch, dispatch_calls
+):
+    central, members, feature = workspace_setup
+    (feature / "tasks.md").write_text(ORCHESTRATION_PAGE, encoding="utf-8")
+    tasks = feature / "tasks" / "s3.md"
+    tasks.write_text(verified_tasks("test: `true`"), encoding="utf-8")
+
+    def close_on_retry(_root, args, _kwargs):
+        if args.endswith("feedback.md"):
+            tasks.write_text(tasks.read_text(encoding="utf-8").replace("- [ ]", "- [X]"), encoding="utf-8")
+
+    patch_scripted(monkeypatch, dispatch_calls, {S3: close_on_retry}, leave_open={S3})
+
+    result = run_step(step_module, central, feature, verify_retries=1)
+
+    s3 = {r["repo"]: r for r in result.output["results"]}["s3"]
+    assert result.status == step_module.StepStatus.COMPLETED, result.error
+    assert s3["status"] == "completed"
+    assert s3["verification"]["status"] == "verified"
+    assert s3["attempts"] == 2
+    assert "| s3 | tasks/s3.md | — | verified |" in (feature / "tasks.md").read_text(
+        encoding="utf-8"
+    )

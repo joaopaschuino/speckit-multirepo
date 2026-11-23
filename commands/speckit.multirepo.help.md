@@ -1,5 +1,5 @@
 ---
-description: Explain the Spec Kit workflow and the multi-repo workspace flow, and recommend the next command for this repository's role and feature state
+description: Explain the Spec Kit workflow and the multirepo workspace flow, and recommend the next command for this repository's role and feature state
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -19,8 +19,8 @@ repository and feature state.
 
 ## Purpose
 
-This is the multi-repo extension's help command. It orients the user in the
-Spec Kit workflow and in the multi-repo workspace flow, answers "how does
+This is the multirepo extension's help command. It orients the user in the
+Spec Kit workflow and in the multirepo workspace flow, answers "how does
 this work" questions, and recommends the concrete next command. It is
 **read-only**: it explains and recommends — it never dispatches workflows,
 never edits feature files, never modifies the workspace manifest. It works
@@ -54,7 +54,7 @@ treat that as "no active feature" — not an error. When FEATURE_DIR exists,
 check which of these exist and report the state they imply:
 
 - `spec.md` / `plan.md` / `tasks.md` → how far the standard SDD cycle went
-- `tasks/<member>.md` files → whether `/speckit.multi-repo.tasks` already
+- `tasks/<member>.md` files → whether `/speckit.multirepo.tasks` already
   split the tasks
 - `governance/` → bundles from a previous dispatch
 - the latest run under `.specify/workflows/runs/` → last dispatch outcome
@@ -62,7 +62,7 @@ check which of these exist and report the state they imply:
 
 In the central repository, also check — independently of any feature —
 whether baseline specs exist: `specs/baseline/*/spec.md` (written by
-`speckit.multi-repo.reverse`). Members declared in the manifest with no
+`speckit.multirepo.reverse`). Members declared in the manifest with no
 baseline at all mean a brownfield workspace whose existing code is not yet
 described by any spec.
 
@@ -86,19 +86,25 @@ exist.
 | Where | Invocation | What it does |
 |---|---|---|
 | Central, agent chat | `specify` cycle (`speckit.specify`, `speckit.plan`, `speckit.tasks`) | produces the feature's spec, plan, tasks |
-| Central, agent chat | `speckit.multi-repo.tasks` | splits `tasks.md` into `tasks/<member>.md` slices, root becomes an orchestration page |
-| Central, agent chat | `speckit.multi-repo.workspace [audit\|bootstrap]` | scaffolds or audits `.specify/workspace.yml`; `bootstrap` clones the missing members from their `url` |
-| Central, agent chat | `speckit.multi-repo.domain [auto\|guided <member>]` | maps the domain topology (`domain`, `communicates_with`) from evidence in member repos, writes `.specify/memory/domain.md` |
-| Central, agent chat | `speckit.multi-repo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/baseline/<member>/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
-| Central, terminal | `specify workflow run multi-repo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
-| Central, terminal | `specify workflow run multi-repo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
-| Central, terminal | `specify workflow run multi-repo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
+| Central, agent chat | `speckit.multirepo.tasks` | splits `tasks.md` into `tasks/<member>.md` slices, root becomes an orchestration page |
+| Central, agent chat | `speckit.multirepo.workspace [audit\|bootstrap]` | scaffolds or audits `.specify/workspace.yml`; `bootstrap` clones the missing members from their `url` |
+| Central, agent chat | `speckit.multirepo.domain [auto\|guided <member>]` | maps the domain topology (`domain`, `communicates_with`) from evidence in member repos, writes `.specify/memory/domain.md` |
+| Central, agent chat | `speckit.multirepo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/baseline/<member>/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
+| Central, agent chat | `speckit-multirepo-orchestrate [<feature-dir>] [--auto]` | entry point for implementation + validation after `tasks` (router side): requires `tasks/<member>.md`, runs `multirepo-check` (aborts on configuration errors), runs `multirepo` polling its output and relaying the gates in the chat (`--auto` pre-approves them), reports per member, writes `<feature>/verification/report.html`; never generates spec/plan/tasks |
+| Central, terminal | `specify workflow run multirepo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
+| Central, terminal | `specify workflow run multirepo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
+| Central, terminal | `specify workflow run multirepo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
 | Central, terminal | `specify workflow resume <run-id>` | re-runs a failed run; completed members are skipped |
-| Member, agent chat | `speckit.multi-repo.implement` | implements this member's task slice (usually dispatched headlessly by the orchestrator, not typed) |
+| Member, agent chat | `speckit.multirepo.implement` | implements this member's task slice (usually dispatched headlessly by the orchestrator, not typed) |
 
 Command invocation syntax varies by integration (skills-mode agents register
-`speckit-multi-repo-tasks`, others `speckit.multi-repo.tasks`) — quote the
+`speckit-multirepo-tasks`, others `speckit.multirepo.tasks`) — quote the
 form present in this repository's agent command directory.
+
+**Naming convention.** The extension id is `multirepo` (one word): every
+command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`). The
+workflows (`multirepo`, `multirepo-check`, `multirepo-bootstrap`) and the
+step type `multirepo-implement` keep their names.
 
 **The workspace model.** All feature state lives in the central repository
 (spec, plan, orchestration `tasks.md`, per-member task files, governance
@@ -107,10 +113,10 @@ member's PR is a pure implementation diff. Dispatch order is topological
 over `depends_on` (human knowledge — never invented), computed per feature
 over participating members only. The manifest's `domain` and
 `communicates_with` fields describe the runtime communication topology
-(cycles allowed) and never affect dispatch; `speckit.multi-repo.domain`
+(cycles allowed) and never affect dispatch; `speckit.multirepo.domain`
 fills them from code evidence plus the team's context. Baseline specs
-(`specs/baseline/<member>/`, from `speckit.multi-repo.reverse`) describe
-what existing members do today — read by `speckit.multi-repo.tasks`, cited
+(`specs/baseline/<member>/`, from `speckit.multirepo.reverse`) describe
+what existing members do today — read by `speckit.multirepo.tasks`, cited
 in `specify`/`plan` prompts (Spec Kit does not load them itself), never
 dispatched. Governance is three constitution layers —
 workspace (`central/.specify/memory/constitution.md`), per-member-type file
@@ -120,27 +126,30 @@ conflicts resolve to the most restrictive rule.
 
 **Troubleshooting map.**
 
+- Tasks are split and the user wants to implement and validate from the
+  chat → `speckit-multirepo-orchestrate` in the central (`--auto` for no
+  questions); the review summary lands in `<feature>/verification/report.html`.
 - A member failed → fix the code in that member repository, then
   `specify workflow resume <run-id>` in the central; members whose task
   files are fully checked off are not dispatched again.
 - A member is not cloned locally → clone it with `specify workflow run
-  multi-repo-bootstrap` (needs the member's `url` in the manifest), or
+  multirepo-bootstrap` (needs the member's `url` in the manifest), or
   re-run with `-i missing=skip` (configuration mistakes still abort; `skip`
   covers local absence only).
 - Unclear whether the workspace is healthy → `specify workflow run
-  multi-repo-check --json` and inspect the `members` report.
-- Tasks were not split → run `speckit.multi-repo.tasks` in the central (the
+  multirepo-check --json` and inspect the `members` report.
+- Tasks were not split → run `speckit.multirepo.tasks` in the central (the
   `after_tasks` hook offers it automatically after `speckit.tasks`).
 - Wrong dispatch order → fix `depends_on` in `.specify/workspace.yml`; the
   graph is never inferred.
-- Nobody knows which repos talk to which → `speckit.multi-repo.domain`
+- Nobody knows which repos talk to which → `speckit.multirepo.domain`
   (`auto` for a full sweep, `guided <member>` to walk the flow from one
-  piece); the result is visible in `multi-repo-check`'s `topology` output.
+  piece); the result is visible in `multirepo-check`'s `topology` output.
 - Existing code, no specs (members declared, no `specs/baseline/*/`) →
-  `speckit.multi-repo.reverse` before the first feature: `contracts-only`
+  `speckit.multirepo.reverse` before the first feature: `contracts-only`
   to centralize the interface specs, `auto` for a full draft, `guided
   <member>` to turn observed behavior into requirements with the team.
-  Run `speckit.multi-repo.domain` first when `.specify/memory/domain.md`
+  Run `speckit.multirepo.domain` first when `.specify/memory/domain.md`
   is missing — reverse uses its confirmed edges as context.
 
 ## Step 4 — Answer shape
@@ -150,13 +159,13 @@ conflicts resolve to the most restrictive rule.
   orientation report instead: this repository's role, the feature state from
   Step 2, and one recommended next action. In the central repository with
   declared members but no baseline specs and no feature yet, that action is
-  `speckit.multi-repo.reverse` (`guided <member>` interactively).
+  `speckit.multirepo.reverse` (`guided <member>` interactively).
 - Always end with the concrete next command and where it runs (which
   repository, agent chat vs terminal).
 - Recommend only what is installed in this repository; when a
   recommendation depends on a missing extension or a missing manifest, say
-  what to install or scaffold first (`specify extension add multi-repo`,
-  `speckit.multi-repo.workspace`).
+  what to install or scaffold first (`specify extension add multirepo`,
+  `speckit.multirepo.workspace`).
 - For depth beyond this command, read the extension's own `README.md` and
-  `docs/tutorial.md` under `.specify/extensions/multi-repo/` when present,
+  `docs/tutorial.md` under `.specify/extensions/multirepo/` when present,
   instead of guessing.

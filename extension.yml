@@ -1,9 +1,9 @@
 schema_version: "1.0"
 
 extension:
-  id: multi-repo
+  id: multirepo
   name: "Multi-Repo Workspace Orchestration"
-  version: "0.8.0"
+  version: "1.0.0"
   description: "Orchestrate spec-driven implementation across a workspace: a central specs repository dispatches implementation to member repositories"
   author: "Joao Victor"
   repository: "https://github.com/joaopaschuino/speckit-multirepo"
@@ -15,39 +15,45 @@ requires:
 
 provides:
   commands:
-    - name: speckit.multi-repo.tasks
-      file: commands/speckit.multi-repo.tasks.md
+    - name: speckit.multirepo.tasks
+      file: commands/speckit.multirepo.tasks.md
       description: "Split the active feature's tasks.md into per-member task files (run in the central specs repository)"
-    - name: speckit.multi-repo.implement
-      file: commands/speckit.multi-repo.implement.md
+    - name: speckit.multirepo.implement
+      file: commands/speckit.multirepo.implement.md
       description: "Implement this repository's slice of a centrally-specified feature (run in a member repository)"
-    - name: speckit.multi-repo.workspace
-      file: commands/speckit.multi-repo.workspace.md
+    - name: speckit.multirepo.workspace
+      file: commands/speckit.multirepo.workspace.md
       description: "Scaffold or audit the workspace manifest against the local filesystem, or bootstrap it — clone the missing members from their manifest url (run in the central specs repository)"
-    - name: speckit.multi-repo.domain
-      file: commands/speckit.multi-repo.domain.md
+    - name: speckit.multirepo.domain
+      file: commands/speckit.multirepo.domain.md
       description: "Map the workspace's domain topology (member domain and communicates_with) by scanning member repositories — automatic or guided — and record it in the manifest (run in the central specs repository)"
-    - name: speckit.multi-repo.reverse
-      file: commands/speckit.multi-repo.reverse.md
+    - name: speckit.multirepo.reverse
+      file: commands/speckit.multirepo.reverse.md
       description: "Reverse-engineer baseline specs (contracts, data model, behaviors, external dependencies) and proposed type constitutions from existing member repositories — automatic, guided, or contracts-only — with file:line evidence (run in the central specs repository)"
-    - name: speckit.multi-repo.help
-      file: commands/speckit.multi-repo.help.md
-      description: "Explain the Spec Kit and multi-repo flows and recommend the next command for this repository's role and feature state (run in any workspace repository)"
+    - name: speckit.multirepo.orchestrate
+      file: commands/speckit-multirepo-orchestrate.md
+      description: "Run implementation and validation of an already-split feature (everything after tasks) across the members — pre-flight check, dispatch with relayed gates or --auto, objective verification, and an executive verification/report.html (run in the central specs repository, router side)"
+    - name: speckit.multirepo.help
+      file: commands/speckit.multirepo.help.md
+      description: "Explain the Spec Kit and multirepo flows and recommend the next command for this repository's role and feature state (run in any workspace repository)"
 
   config:
-    - name: "multi-repo-config.yml"
+    - name: "multirepo-config.yml"
       template: "config-template.yml"
-      description: "Optional multi-repo settings (member task file default, feature persistence)"
+      description: "Optional multirepo settings (member task file default, feature persistence)"
       required: false
 
 hooks:
   after_tasks:
-    command: speckit.multi-repo.tasks
-    optional: true
+    command: speckit.multirepo.tasks
+    # Mandatory: the core tasks command rewrites tasks.md and drops the orchestration table, which only this
+    # command rebuilds.
+    optional: false
     prompt: "Split tasks across workspace members?"
     description: "Split the generated tasks into per-member task files based on .specify/workspace.yml"
 
 tags:
+  - "multirepo"
   - "multi-repo"
   - "orchestration"
   - "workspace"

@@ -5,302 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - 2026-11-16
+## [1.0.0] - 2026-11-23
+
+First stable release. Requires Spec Kit ≥ 1.1.0. Extension id `multirepo`: every
+agent command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`);
+the workflows are `multirepo`, `multirepo-check` and `multirepo-bootstrap`,
+and the custom step type is `multirepo-implement`.
+
+### Fixed
+
+- The commands' `scripts:` front matter names `scripts/bash/check-prerequisites.sh`
+  (and the PowerShell and Python variants), which Spec Kit resolves inside the
+  installed extension, but the package did not ship them: the first step of
+  `/speckit.multirepo.tasks`, `.implement` and `.help` exited 127. The package
+  now ships thin wrappers that delegate to the project's core scripts in
+  `.specify/scripts/`.
+- A member whose Verification commands all pass while its task file still has
+  open `- [ ]` tasks is no longer reported `verified`: its verification status
+  and Status column become `incomplete`, the step fails for it, and a retry
+  (`verify_retries`) gets feedback listing the open tasks.
+- `/speckit.multirepo.tasks` re-runs reset a member to `pending` when its task
+  file gets new open tasks (a re-split, converge gaps, review findings), instead
+  of keeping `verified`.
+- The `after_tasks` hook is mandatory (`optional: false`): the core tasks
+  command rewrites `tasks.md` and drops the orchestration table, which only the
+  split rebuilds. In a repository without `.specify/workspace.yml` (a member)
+  the split ends without changing anything.
+- `- [ ]` lines inside HTML comments or fenced code blocks of a member task
+  file are examples, not open tasks.
+- The Python prerequisite wrapper returns the core script's exit code on
+  Windows too; the PowerShell wrapper finds the core script in paths with
+  `[ ]`.
+
+### Changed (tests)
+
+- The fake agents of the test suite check off the dispatched member's tasks,
+  as a real agent does (`leave_open` / a `leave-open` sentinel keeps them open).
 
 ### Added
 
-- `/speckit.multi-repo.reverse` agent command (central repo): reverse-engineers
-  **baseline specs** from existing member repositories. Reuses the
-  `/speckit.multi-repo.domain` scan engine and evidence model (`file:line`,
-  snippet, confidence; bounded scans) and extends it with exposed contracts,
-  data model, behaviors, and implicit constitution signals; confirmed edges
-  and domain notes from `.specify/memory/domain.md` become spec context.
-  Modes: `contracts-only` copies and normalizes the members' interface specs
-  into `specs/baseline/<member>/contracts/` (deterministic, with an
-  `INDEX.md`); `auto [<member>...]` drafts
-  `specs/baseline/<member>/spec.md` (Overview, Interfaces, Data model,
-  Behaviors, External dependencies) with every statement marked
-  confirmed/unconfirmed; `guided [<member>]` builds it capability by
-  capability with the team — business rules, `intentional` behaviors as
-  requirements, `incidental` ones as *Observed behavior — not contractual* —
-  walking confirmed neighbours as a frontier. Proposes
-  `constitutions/<type>.md` from consistent patterns, never overwriting an
-  existing file (diff + `<type>.proposed.md`). Writes only under `specs/` and
-  `constitutions/`, never `workspace.yml`; headless runs mark everything
-  unconfirmed
-- `/speckit.multi-repo.help` recommends `reverse` when the manifest declares
-  members but no baseline specs exist
-- `/speckit.multi-repo.tasks` reads `specs/baseline/<member>/spec.md` when
-  present: ownership follows what a member exposes (never what it only
-  consumes), tasks on existing interfaces/entities keep their text but get an
-  "already exists — extend" note, and tasks contradicting a confirmed baseline requirement are
-  flagged in the report. Spec Kit does not load baselines on its own — cite
-  them in the `/speckit.specify` / `/speckit.plan` prompt
+- **Workspace manifest** (`.specify/workspace.yml`): central specs repository
+  plus member repositories, with `depends_on` ordering, optional per-member
+  `constitution`, `url` (bootstrap remote) and domain topology; mono-repo
+  layouts supported
+- **`multirepo-implement` workflow step**: dispatches each member in
+  dependency waves (Kahn), with `dispatch_timeout`, `missing`
+  (`error` | `skip`), `skip_completed`, `stop_on_failure` and `dry_run`
+- **Objective verification (router / worker)**: member task files end with a
+  `## Verification` section whose shell checks decide, by exit code, whether
+  a member is done; `verify_retries` re-dispatches with
+  `verification/<member>.feedback.md`; results in `verification/report.md`
+  and `verification/<member>.log`; verification-only members for cross-repo
+  contract checks; `ready: false` holds a member and its dependents
+- **Governance bundles**: the workspace, member/type and member-local
+  constitution layers combined into `<feature>/governance/<member>.md` per
+  dispatch, with fail-fast validation; `install.sh member` keeps a
+  governance section in the member's `AGENTS.md`
+- **Workflows**: `multirepo` (confirm gate → dispatch + verification →
+  review gate), `multirepo-check` (readiness and topology dry run) and
+  `multirepo-bootstrap` (clone missing members from their `url`)
+- **Agent commands**:
+  - `speckit.multirepo.orchestrate` (central, router side): implementation +
+    validation of a feature already split into `tasks/<member>.md` —
+    everything after `tasks` — from the agent chat. Takes the feature
+    directory (default: the active feature), `--auto` (pre-approves the
+    gates) and `--report-only`; aborts when the per-member task files are
+    missing or `multirepo-check` reports `no-dispatch` / `no-integration` /
+    `unknown-integration` / `constitution-missing`; runs `multirepo` in the
+    background, relays its gates, and writes
+    `<feature>/verification/report.html` — a standalone executive summary
+    (inline CSS, no dependencies): verified/total, per-member table,
+    *Requires attention* with expected vs actual exit per failing check, and
+    the source files for drill-down
+  - `speckit.multirepo.tasks` (central): splits the feature's tasks per
+    member (also offered through the `after_tasks` hook)
+  - `speckit.multirepo.implement` (member, worker side): headless-friendly
+    implementation that runs the task file's Verification checks
+  - `speckit.multirepo.workspace` (central): scaffolds and checks the
+    workspace manifest
+  - `speckit.multirepo.domain` (central): maps the domain topology
+  - `speckit.multirepo.reverse` (central): baseline specs for existing code
+  - `speckit.multirepo.help`: orientation, including "Who runs what, where"
+- `install.sh` (central | member) with `--dev` and `--release` modes, in-place
+  upgrades by re-running it, and `SPECIFY_BIN`
 
-### Changed
+### Upgrade from 0.x
 
-- `/speckit.multi-repo.domain` skips `specs/baseline/` when reading feature
-  `contracts/` as evidence (baseline contracts are copies of member files)
-
-### Upgrade
-
-- Re-run the same `install.sh` command you used originally on the central
-  repository and on each member to register the new command. Manifests are
-  unchanged
-
-## [0.7.2] - 2026-11-13
-
-### Added
-
-- **Member `url` in the workspace manifest**: optional git remote a member
-  is cloned from when its `path` does not exist (non-empty string; unknown
-  member keys are still rejected)
-- **Workspace bootstrap** — clone the central repository, then
-  `specify workflow run multi-repo-bootstrap` (or
-  `/speckit.multi-repo.workspace bootstrap`): every absent member with a
-  `url` is cloned (`git clone <url> <path>`, parent directories created),
-  present members are skipped, absent members without `url` are reported, a
-  failed clone aborts with the git error, and clones inside the central
-  repository are added to its `.gitignore`. `-i dry_run=true` previews. The
-  step gains a `bootstrap` mode; `install.sh central` installs the new
-  workflow
-- `/speckit.multi-repo.workspace` fills `url` from each member's `origin`
-  remote (scaffold, and audit after confirmation — never for mono-repo
-  subdirectories); `multi-repo-check` reports `url` / `suggested_url` per
-  member, and a not-cloned member with `url` points to the bootstrap
-
-### Upgrade
-
-- Re-run the same `install.sh` command you used originally on the central
-  repository and on each member; on the central repository it also adds the
-  new `multi-repo-bootstrap` workflow. Existing manifests stay valid (`url`
-  is optional)
-
-## [0.7.1] - 2026-11-11
-
-### Added
-
-- **Mono-repo layout** documented (README *Repository topologies* →
-  *Mono-repo*): the repository root is the central project and each stack
-  is a member subdirectory (`path: apps/web`). No orchestrator change — a
-  new end-to-end test covers it
-- `/speckit.multi-repo.workspace` discovers members up to two levels deep
-  inside the repo root (`apps/web`, `services/api`); member ids that would
-  collide are derived from the relative path (`apps-web`, `services-web`)
-
-### Changed
-
-- Repository renamed to `joaopaschuino/speckit-multirepo`: install URLs,
-  `install.sh` (`REPO`), and `extension.yml` point at the new name (GitHub
-  redirects the old one)
-
-## [0.7.0] - 2026-11-11
-
-### Added
-
-- **Domain topology in the workspace manifest**: members accept optional
-  `domain` (business domain) and `communicates_with` (member ids the member
-  talks to at runtime). `communicates_with` must reference known members
-  other than the member itself, but may contain cycles — communication is
-  often bidirectional. `depends_on` remains the only execution graph
-  (acyclic; waves and `ready: false` holds are unchanged)
-- Dry runs (`multi-repo-check`) report each member's `domain` and
-  `communicates_with`, and a `topology` output: a Mermaid flowchart with one
-  subgraph per domain, dependency edges, and communication edges
-- `/speckit.multi-repo.domain` agent command (central repo): maps the domain
-  topology from evidence in member repositories — IaC, interface specs,
-  config, HTTP/messaging/storage clients, feature `contracts/` — as edges
-  with channel, direction, confidence, and `file:line`. `auto` sweeps every
-  member and proposes the whole map; `guided [<member>]` walks the flow
-  outward from one piece in a conversation where the user adds the domain
-  context. Writes `domain`/`communicates_with` after confirmation (never
-  `depends_on`) and `.specify/memory/domain.md` (diagram, communication
-  table, external systems, domain notes). `/speckit.multi-repo.tasks` and
-  `/speckit.multi-repo.workspace` point to it
-
-## [0.6.0] - 2026-11-10
-
-### Added
-
-- **Objective verification (router/worker)**: member task files end with a
-  `## Verification` section — POSIX commands for lint, type-check, test, and
-  e2e with their expected exit codes (`- test: `npm test` → exit 0`).
-  `/speckit.multi-repo.tasks` generates it from each member's real tooling
-  and preserves it on re-runs like checkbox state. After each member's
-  dispatch the step runs every command in the member repository (`sh`,
-  `cwd` = member repo, feature axis exported), logs the output to
-  `<feature>/verification/<member>.log`, and records a per-member
-  `verification` result (`verified` | `failed` | `skipped`) in the step
-  output; a member whose checks fail is `failed`. The run summary is written
-  to `<feature>/verification/report.md`
-- `verify_retries: N` step option (default `0`; also a `multi-repo` workflow
-  input): a failed verification re-dispatches the member's agent up to N
-  more times with a feedback file (failing commands, exit codes, output)
-  passed as a third command argument
-- **Contract-check members**: a task file with a Verification section and no
-  task checkboxes is verification-only — no agent is dispatched, its
-  commands run after its `depends_on` producers, and its path only has to
-  exist (a plain consumer or contracts repository). README example and a
-  `tasks/contract-check.md` template in `/speckit.multi-repo.tasks` for
-  features with contracts between members (schema diff, consumer-driven
-  contract tests against the feature's `contracts/`)
-- The step keeps the Status column of the orchestration page
-  (`<feature>/tasks.md`) current: `pending → dispatched → verified |
-  completed | failed`
-- `ready: false` in a member task file's front matter holds that member —
-  and its dependents — back (`status: not-ready`, output `not_ready`), so a
-  feature can be dispatched in subsets
-- The `multi-repo` review gate shows the verification summary and report
-
-### Changed
-
-- `dispatch_timeout` now bounds sequential (streamed) dispatches too, via a
-  watchdog — previously only parallel waves were time-bounded. A timed-out
-  member is `failed` with `timed_out: true`. The agent stays in the
-  orchestrator's process group (terminal behavior unchanged); on timeout its
-  process tree is killed, descendants before the agent, so no build/test
-  process it spawned keeps writing to the member repository. Verification
-  commands share the same bound and tree kill
-- With `skip_completed`, a checked-off member that has Verification commands
-  is skipped only when its checks pass; otherwise it is re-dispatched with
-  feedback
-- `speckit.multi-repo.implement` runs the task file's Verification commands
-  during validation, reads the retry feedback file when present, and must
-  never weaken the Verification section
-
-## [0.5.0] - 2026-10-07
-
-### Added
-
-- `speckit.multi-repo.help` agent command, installed with the extension in
-  the central and every member repository: answers orientation questions in
-  the agent chat — where to start with an idea, which command runs next for
-  the current repository and feature state, how waves, resume, and
-  governance work. It detects the repository's role (central / member /
-  pre-scaffold project) and the active feature state before answering, and
-  is read-only: it explains and recommends, never dispatches workflows or
-  edits files
-
-## [0.4.0] - 2026-10-07
-
-### Added
-
-- **Governance bundles**: before dispatching a member, the orchestrator
-  assembles every constitution layer that exists (workspace, member/type,
-  member-local) into one Markdown file per member under
-  `<feature>/governance/<member>.md`, and passes its absolute path as the
-  dispatched command's second argument. The member's agent reads one
-  authoritative file instead of resolving layer paths itself; the bundle
-  doubles as a per-dispatch audit artifact of exactly which rules each
-  member received
-- Fail-fast readability validation: a constitution file that exists but
-  cannot be read (permissions, encoding) fails the run before any dispatch
-- `install.sh member` now maintains a "Multi-repo workspace governance"
-  section in the member's `AGENTS.md` (idempotent, dedicated
-  `<!-- SPECKIT-MULTI-REPO:GOVERNANCE -->` markers): the persistent channel
-  that keeps free-form edits — which bypass the implement command — subject
-  to the workspace constitution layers
-- **Upgrading in place**: `install.sh` now replaces already-installed
-  components (`--force` on the extension and the custom step; workflows
-  overwrite by default), making a re-run the supported upgrade path —
-  documented in the README's new "Upgrading an existing workspace" section
-- `SPECIFY_BIN` environment variable on `install.sh`: point at a specific
-  `specify` binary when `PATH` carries one older than 1.1.0
-
-### Changed
-
-- Dispatch protocol: the second command argument is now the governance
-  bundle path (previously the member/type constitution path, only when
-  configured). The bundle is dispatched uniformly, even when no layer
-  exists, so the member command never has to guess which layers apply.
-  Upgrade the extension and the custom workflow step together
-- `speckit.multi-repo.implement`: governance step reads the bundle when
-  dispatched; the manual three-layer path resolution remains as the
-  standalone interactive fallback
-
-### Upgrade
-
-- Re-run the same `install.sh` command you used originally on the central
-  repository and on each member — it now upgrades in place (replaces the
-  extension and the custom step, re-adds the workflows, refreshes the
-  members' `AGENTS.md` governance section). Verify with
-  `specify workflow run multi-repo-check`
-
-## [0.3.0] - 2026-10-04
-
-### Added
-
-- `dry_run` setting on the orchestrator step and the new `multi-repo-check`
-  workflow: a read-only workspace report — every declared member classified
-  (`ready` / `not-cloned` / `not-initialized` / `no-integration` /
-  `unknown-integration` / `no-dispatch` / `constitution-missing`),
-  participation and dispatch waves computed, nothing dispatched. A
-  feature-less dry run reports the whole declared workspace
-- `missing` setting (`error` default | `skip`): with `skip`, participants
-  that are not cloned or not initialized locally are recorded as
-  `status: missing` (with reason) in the results while the ready members
-  dispatch; configuration errors still abort in both modes
-- `speckit.multi-repo.workspace` agent command: scaffolds
-  `.specify/workspace.yml` from sibling Spec Kit projects (never inventing
-  `depends_on`) or audits an existing manifest (readiness table, drift
-  detection, confirmed additions only)
-- `dry_run` and `missing` exposed as inputs on the `multi-repo` workflow
-
-### Upgrade
-
-- Reinstall the extension and the custom workflow step; re-add both
-  workflows (`multi-repo` gained inputs, `multi-repo-check` is new)
-- **Spec Kit ≥ 1.1.0 is now required**: installing the custom step needs
-  `specify workflow step add --dev/--from`, introduced in Spec Kit 1.1.0.
-  On 1.0.x, copy the step package by hand:
-  `cp -R step/multi-repo-implement <central>/.specify/workflows/steps/`
-
-## [0.2.0] - 2026-10-04
-
-### Added
-
-- Optional per-member `constitution` field in the workspace manifest: a
-  shared governance file stored in the central repository (for example
-  `constitutions/lambda.md`). Every member pointing at the same file shares
-  it, so repositories of the same type read one constitution instead of
-  keeping copies
-- Three-layer governance in member implementation: workspace constitution
-  (central `.specify/memory/constitution.md`) → member/type constitution
-  (the shared file above) → member-local constitution, with the most
-  restrictive rule winning; the member's completion report names the layers
-  that applied
-- Fail-fast validation: a dispatch run fails before any dispatch when a
-  member's configured constitution file does not exist in the central
-  repository
-- The member's constitution path travels in the dispatched command
-  arguments (safe under concurrent waves) and is recorded in the per-member
-  step results
-
-### Upgrade
-
-- Reinstall the extension and the custom workflow step (both changed); the
-  workflow definition is unchanged
-
-## [0.1.0] - 2026-10-04
-
-### Added
-
-- Workspace manifest (`.specify/workspace.yml`): central specs repository
-  declares member repositories with `path`, `integration`, `tasks_file`, and
-  `depends_on` (validated: unique ids, known dependencies, acyclic graph)
-- `multi-repo-implement` custom workflow step: dependency-wave (Kahn)
-  dispatch of `speckit.multi-repo.implement` to each member repo headlessly,
-  with `SPECIFY_FEATURE_DIRECTORY` exported, `skip_completed`,
-  `stop_on_failure`, per-wave `max_concurrency`, and per-member results in
-  the step output
-- `multi-repo` workflow: confirm gate → orchestrated dispatch → review gate,
-  with CI-friendly verdict inputs
-- `speckit.multi-repo.tasks` command (central): splits the feature's
-  `tasks.md` into per-member `tasks/<id>.md` files and an orchestration page
-- `speckit.multi-repo.implement` command (member): headless-friendly member
-  implementation slice, reading spec/plan/tasks from the central feature
-  directory
-- `after_tasks` optional hook offering the task split
-- `install.sh` with local (`--dev`) and GitHub-release installation modes
-- Test suite: manifest parser/validator, step execution, and an end-to-end
-  install/run/resume flow against a fake agent executable
+0.x used the id `multi-repo` for the extension, workflows and step. Upgrade
+the central repository and every member together, after finishing paused 0.x
+runs (they cannot be resumed afterwards), by re-running `install.sh`. It
+installs and checks 1.0.0 first; only then does it remove the `multi-repo`
+extension, carry `multi-repo-config.yml` over to `multirepo-config.yml` (backed
+up in `.specify/multirepo-migration/` until then; an edited
+`multirepo-config.yml` is kept) and, on the central repository, save the 0.x
+workflow definitions to `.specify/multirepo-migration/workflows/` and remove
+the `multi-repo*` workflows and the `multi-repo-implement`
+step. See README → Upgrading an existing workspace.
