@@ -159,7 +159,7 @@ flowchart LR
 
 Members shared by several domains use `domain: platform` (or `shared-*`): one subgraph of their own, consumers as cross-domain edges.
 
-Diagram conventions match the orchestrator's `topology` output (`specify workflow run multi-repo-check --json | jq -r .step_results.check.output.topology`): one `subgraph` per domain; `a ==> b` for `depends_on` (a before b — copied from the manifest, never inferred); `a -.-> b` for communication, `a <-.-> b` when both list each other; external systems as `x_<name>[("…")]` nodes with a labelled dotted edge.
+Diagram conventions match the orchestrator's `topology` output (`.step_results.check.output.topology` in `.specify/workflows/runs/<run-id>/state.json` after `specify workflow run multi-repo-check`): one `subgraph` per domain; `a ==> b` for `depends_on` (a before b — copied from the manifest, never inferred); `a -.-> b` for communication, `a <-.-> b` when both list each other; external systems as `x_<name>[("…")]` nodes with a labelled dotted edge.
 
 ## Step 5 — Report
 

@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-11-23
+
+### Added
+
+- `speckit-multirepo-orchestrate` agent command (central repo, router side):
+  implementation + validation of a feature already split into
+  `tasks/<member>.md` — everything after `tasks` — driven from the agent
+  chat. Takes the feature directory under `specs/` (default: the active
+  feature) and `--auto` for non-interactive runs. Aborts when the per-member
+  task files are missing (it never generates spec, plan, or tasks); runs
+  `multi-repo-check --json` and aborts without dispatching on
+  `no-dispatch` / `no-integration` / `unknown-integration` /
+  `constitution-missing`; runs `multi-repo` in the background polling its
+  output (dispatches may last up to `dispatch_timeout` per member), relaying
+  the `confirm` / `review` gates to the user (`--auto` pre-approves them);
+  reports the result per member — validation stays the workflow's
+  (`## Verification` exit codes, `verify_retries`,
+  `verification/<member>.feedback.md`). Distinct from the worker-side
+  `speckit.multi-repo.implement`
+- `<feature>/verification/report.html`, written by
+  `speckit-multirepo-orchestrate` at the end of the run: a standalone
+  executive summary for human review (inline CSS, no dependencies) — header
+  with feature, date, `verified/total` and final status; per-member table
+  (status, attempts, failed checks, from `verification/report.md`);
+  *Requires attention* with only the failing members — per check, expected
+  vs actual exit and 1–2 lines of context from `<member>.feedback.md`, no
+  full logs; footer with the source files for drill-down
+- Naming convention for new commands: `multirepo` as one word
+  (`speckit-multirepo-<name>`, command file
+  `commands/speckit-multirepo-<name>.md`). Existing `speckit.multi-repo.*`
+  commands keep their names. Spec Kit requires extension command names to be
+  `speckit.<extension-id>.<command>`, so the new command registers as
+  `speckit.multi-repo.orchestrate` with the alias
+  `speckit.multirepo.orchestrate` — skills-mode agents expose the
+  `speckit-multirepo-orchestrate` skill (agents that ignore aliases, such as
+  Copilot skills, list `speckit-multi-repo-orchestrate`)
+- `/speckit.multi-repo.help` lists the command in "Who runs what, where" and
+  recommends it once tasks are split
+
+### Fixed
+
+- README and `/speckit.multi-repo.domain`: `workflow run --json` prints the
+  run outcome only; the `multi-repo-check` examples now read step outputs
+  from `.specify/workflows/runs/<run-id>/state.json`
+
+### Upgrade
+
+- Re-run the same `install.sh` command you used originally on the central
+  repository (and on each member, to keep versions aligned) to register the
+  new command. Manifests are unchanged
+
 ## [0.8.0] - 2026-11-16
 
 ### Added

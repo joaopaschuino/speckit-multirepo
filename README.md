@@ -66,20 +66,20 @@ In each **member repository**:
 
 ```sh
 specify extension add multi-repo --from \
-  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v0.8.0.zip
+  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v0.9.0.zip
 ```
 
 In the **central specs repository**, the two commands above plus:
 
 ```sh
 specify workflow step add multi-repo-implement --from \
-  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v0.8.0/step-multi-repo-implement-v0.8.0.zip
+  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v0.9.0/step-multi-repo-implement-v0.9.0.zip
 specify workflow add multi-repo --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo/workflow.yml
 specify workflow add multi-repo-check --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo-check/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo-check/workflow.yml
 specify workflow add multi-repo-bootstrap --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.8.0/workflow/multi-repo-bootstrap/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo-bootstrap/workflow.yml
 ```
 
 (The step install asks an interactive trust confirmation before downloading —
@@ -89,7 +89,7 @@ default-deny; answer `yes`.)
 
 ```sh
 ./install.sh central /path/to/central-repo                # local (--dev) mode
-./install.sh member  /path/to/member-repo --release v0.8.0 # release mode
+./install.sh member  /path/to/member-repo --release v0.9.0 # release mode
 ```
 
 `install.sh` runs, respectively:
@@ -112,9 +112,9 @@ idempotently. Nothing else in your repositories is touched; governance
 bundles are regenerated per dispatch, so there is nothing to migrate.
 
 ```sh
-./install.sh central /path/to/central-repo --release v0.8.0   # or --dev <clone-dir>
-./install.sh member  /path/to/member-a --release v0.8.0
-./install.sh member  /path/to/member-b --release v0.8.0
+./install.sh central /path/to/central-repo --release v0.9.0   # or --dev <clone-dir>
+./install.sh member  /path/to/member-a --release v0.9.0
+./install.sh member  /path/to/member-b --release v0.9.0
 
 specify workflow run multi-repo-check   # verify: every member should report ready
 ```
@@ -504,7 +504,11 @@ always receives the current rules.
 # split tasks across members (also offered automatically by the after_tasks hook)
 /speckit.multi-repo.tasks
 
-# dispatch implementation (interactive gates)
+# implementation + validation from the agent chat (pre-flight, dispatch,
+# verification, gates relayed in the chat, verification/report.html)
+/speckit-multirepo-orchestrate specs/001-my-feature        # or: … --auto
+
+# or drive the workflow from the terminal (interactive gates)
 specify workflow run multi-repo -i feature=specs/001-my-feature
 
 # or fully non-interactive (CI): pre-approve the gates via inputs
@@ -519,6 +523,52 @@ Inside a member repo, `/speckit.multi-repo.implement` also works standalone
 (interactively) — it resolves the feature via `SPECIFY_FEATURE_DIRECTORY` or
 the member's persisted `feature.json`, and the member's task file via
 argument, `SPECKIT_MULTI_REPO_TASKS_FILE`, or the extension config.
+
+## Orchestrating from the agent chat — `speckit-multirepo-orchestrate`
+
+`speckit-multirepo-orchestrate` is the chat entry point for implementation
+and validation — everything after `tasks`. It runs in the **central
+repository** (router side) and drives the workflows above for you; it is
+not `speckit.multi-repo.implement`, the worker-side command that runs inside
+a member. Arguments: the feature directory under `specs/` (default: the
+active feature) and `--auto` for a non-interactive run.
+
+1. **Precondition** — the feature must already have `tasks/<member>.md`
+   files (from `/speckit.multi-repo.tasks`); otherwise it stops and says so.
+   It never generates spec, plan, or tasks.
+2. **Pre-flight** — `specify workflow run multi-repo-check --json`; any
+   participant in `no-dispatch` / `no-integration` / `unknown-integration` /
+   `constitution-missing` is reported with its fix and nothing is
+   dispatched.
+3. **Dispatch** — `specify workflow run multi-repo -i feature=<dir>` in the
+   background, polling its output (a dispatch may last up to
+   `dispatch_timeout` per member). The `confirm` and `review` gates are
+   asked in the chat (`workflow resume <run-id> -i review=…`); `--auto`
+   pre-approves them.
+4. **Validation** is the workflow's own: `## Verification` exit codes,
+   `verify_retries`, and `verification/<member>.feedback.md` — the command
+   only reports the outcome per member.
+5. **Report** — it writes `<feature>/verification/report.html`, a
+   standalone executive summary for human review (inline CSS, no
+   dependencies): header (feature, date, `verified/total`, final status), a
+   per-member table (status, attempts, failed checks, from
+   `verification/report.md`), a *Requires attention* section with only the
+   failing members — per check, expected vs actual exit and one or two lines
+   of context from `<member>.feedback.md`, never full logs — and a footer
+   with the source files (`report.md`, `<member>.log`,
+   `<member>.feedback.md`) for drill-down. The path is printed in the reply.
+
+The command registers as `speckit.multi-repo.orchestrate` (Spec Kit requires
+extension command names to be `speckit.<extension-id>.<command>`) with the
+alias `speckit.multirepo.orchestrate`, so skills-mode agents (Claude Code,
+Codex, …) expose it as the `speckit-multirepo-orchestrate` skill; agents
+that ignore aliases (for example Copilot skills) list it as
+`speckit-multi-repo-orchestrate`.
+
+**Naming convention.** New commands use `multirepo` as one word —
+`speckit-multirepo-<name>` (command file `commands/speckit-multirepo-<name>.md`,
+alias `speckit.multirepo.<name>`). Existing commands keep their
+`speckit.multi-repo.*` names; they are not renamed.
 
 ## Help
 
@@ -543,11 +593,13 @@ waves are listed — nothing is dispatched. Use `--json` for a
 machine-readable report:
 
 ```sh
-specify workflow run multi-repo-check --json \
-  | jq '.step_results.check.output.members'
-specify workflow run multi-repo-check --json \
-  | jq -r '.step_results.check.output.topology'   # Mermaid diagram
+run_id=$(specify workflow run multi-repo-check --json | jq -r .run_id)
+jq '.step_results.check.output.members' .specify/workflows/runs/$run_id/state.json
+jq -r '.step_results.check.output.topology' .specify/workflows/runs/$run_id/state.json   # Mermaid diagram
 ```
+
+(`--json` prints the run outcome — `run_id`, `status`, `gate`, `error`; step
+outputs live in the run's `state.json`.)
 
 **`missing: skip`** — for teams where each person has cloned only part of
 the workspace. By default (`missing: error`) a participant that is not

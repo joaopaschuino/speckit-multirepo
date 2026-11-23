@@ -90,6 +90,7 @@ exist.
 | Central, agent chat | `speckit.multi-repo.workspace [audit\|bootstrap]` | scaffolds or audits `.specify/workspace.yml`; `bootstrap` clones the missing members from their `url` |
 | Central, agent chat | `speckit.multi-repo.domain [auto\|guided <member>]` | maps the domain topology (`domain`, `communicates_with`) from evidence in member repos, writes `.specify/memory/domain.md` |
 | Central, agent chat | `speckit.multi-repo.reverse [auto [<member>...]\|guided <member>\|contracts-only]` | reverse-engineers baseline specs of existing members into `specs/baseline/<member>/` (contracts, data model, behaviors, external dependencies, with `file:line` evidence) and proposes type constitutions under `constitutions/`; never edits the manifest |
+| Central, agent chat | `speckit-multirepo-orchestrate [<feature-dir>] [--auto]` | entry point for implementation + validation after `tasks` (router side): requires `tasks/<member>.md`, runs `multi-repo-check` (aborts on configuration errors), runs `multi-repo` polling its output and relaying the gates in the chat (`--auto` pre-approves them), reports per member, writes `<feature>/verification/report.html`; never generates spec/plan/tasks |
 | Central, terminal | `specify workflow run multi-repo -i feature=<dir>` | dispatches implementation to members in waves, interactive gates |
 | Central, terminal | `specify workflow run multi-repo-check [--json]` | read-only doctor: member readiness + waves, dispatches nothing |
 | Central, terminal | `specify workflow run multi-repo-bootstrap [-i dry_run=true]` | clones members missing locally from their manifest `url`, git-ignores clones inside the central repo |
@@ -99,6 +100,12 @@ exist.
 Command invocation syntax varies by integration (skills-mode agents register
 `speckit-multi-repo-tasks`, others `speckit.multi-repo.tasks`) — quote the
 form present in this repository's agent command directory.
+
+**Naming convention.** Commands added from 0.9.0 on write `multirepo` as one
+word: `speckit-multirepo-orchestrate` (skill), alias
+`speckit.multirepo.orchestrate`; its canonical Spec Kit name is
+`speckit.multi-repo.orchestrate`, the form agents without alias support
+show. Existing commands keep `speckit.multi-repo.*`.
 
 **The workspace model.** All feature state lives in the central repository
 (spec, plan, orchestration `tasks.md`, per-member task files, governance
@@ -120,6 +127,9 @@ conflicts resolve to the most restrictive rule.
 
 **Troubleshooting map.**
 
+- Tasks are split and the user wants to implement and validate from the
+  chat → `speckit-multirepo-orchestrate` in the central (`--auto` for no
+  questions); the review summary lands in `<feature>/verification/report.html`.
 - A member failed → fix the code in that member repository, then
   `specify workflow resume <run-id>` in the central; members whose task
   files are fully checked off are not dispatched again.

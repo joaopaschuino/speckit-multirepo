@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: multi-repo
   name: "Multi-Repo Workspace Orchestration"
-  version: "0.8.0"
+  version: "0.9.0"
   description: "Orchestrate spec-driven implementation across a workspace: a central specs repository dispatches implementation to member repositories"
   author: "Joao Victor"
   repository: "https://github.com/joaopaschuino/speckit-multirepo"
@@ -30,6 +30,11 @@ provides:
     - name: speckit.multi-repo.reverse
       file: commands/speckit.multi-repo.reverse.md
       description: "Reverse-engineer baseline specs (contracts, data model, behaviors, external dependencies) and proposed type constitutions from existing member repositories — automatic, guided, or contracts-only — with file:line evidence (run in the central specs repository)"
+    - name: speckit.multi-repo.orchestrate
+      aliases:
+        - speckit.multirepo.orchestrate
+      file: commands/speckit-multirepo-orchestrate.md
+      description: "speckit-multirepo-orchestrate: run implementation and validation of an already-split feature (everything after tasks) across the members — pre-flight check, dispatch with relayed gates or --auto, objective verification, and an executive verification/report.html (run in the central specs repository, router side)"
     - name: speckit.multi-repo.help
       file: commands/speckit.multi-repo.help.md
       description: "Explain the Spec Kit and multi-repo flows and recommend the next command for this repository's role and feature state (run in any workspace repository)"
