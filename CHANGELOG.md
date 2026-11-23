@@ -29,14 +29,18 @@ and the custom step type is `multirepo-implement`.
   of keeping `verified`.
 - The `after_tasks` hook is mandatory (`optional: false`): the core tasks
   command rewrites `tasks.md` and drops the orchestration table, which only the
-  split rebuilds.
+  split rebuilds. In a repository without `.specify/workspace.yml` (a member)
+  the split ends without changing anything.
+- `- [ ]` lines inside HTML comments or fenced code blocks of a member task
+  file are examples, not open tasks.
+- The Python prerequisite wrapper returns the core script's exit code on
+  Windows too; the PowerShell wrapper finds the core script in paths with
+  `[ ]`.
 
 ### Changed (tests)
 
 - The fake agents of the test suite check off the dispatched member's tasks,
   as a real agent does (`leave_open` / a `leave-open` sentinel keeps them open).
-
-## [0.8.0] - 2026-11-16
 
 ### Added
 
