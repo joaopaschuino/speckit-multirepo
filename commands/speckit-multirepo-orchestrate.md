@@ -107,6 +107,8 @@ Write it after every run that dispatched (whatever the final status — complete
 - `.step_results.implement.output.results` from the run's `state.json` — fallback for anything the files do not hold (a dispatch failure has no feedback file: use the result's `error`, `exit_code`, `timed_out`);
 - `.step_results.implement.output.waves` and `stopped_after_wave` — when a wave fails the run stops (`stop_on_failure`), so members of later waves have no row in `results` / `report.md`: list each of them as `not dispatched` (reason: `stopped after wave <N+1> failed`).
 
+**With `--report-only`, the run's `state.json` is the primary source.** `report.md` and the feedback files are overwritten by every run of the feature, so they may belong to a different run than `<run_id>`. Take the member set, dispatch and verification status, attempts, and failed checks from `.step_results.implement.output.results` (and `waves` / `stopped_after_wave`) of `<run_id>`. Use `report.md` and `<member>.feedback.md` only to add context, and only when they agree with `state.json` (same members, same statuses); when they do not, ignore them, take the failing checks' details from each result's `verification`, and add a note in the header: `report.md belongs to a different run — details from state.json only`.
+
 Format rules:
 
 - One standalone file: inline `<style>` only, no `<script>`, no external CSS/fonts/images/CDN, UTF-8 (`<meta charset="utf-8">`). It must render offline when opened from disk.

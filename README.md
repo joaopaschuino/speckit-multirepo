@@ -123,6 +123,18 @@ Read the target version's entry in the [CHANGELOG](CHANGELOG.md) first —
 a release may carry an `Upgrade` section with extra steps (for example
 manifest format changes).
 
+**Coming from a 0.x release?** 1.0.0 is a new installation, not an
+upgrade: the extension id changed from `multi-repo` to `multirepo`, and
+nothing is migrated. Remove the old extension, then install 1.0.0 as on
+a fresh repository (settings saved in
+`.specify/extensions/multi-repo/multi-repo-config.yml` are not carried
+over — set them again in `multirepo-config.yml` if you need them):
+
+```sh
+specify extension remove multi-repo
+./install.sh member /path/to/member-repo --release v1.0.0
+```
+
 If your `PATH` carries a `specify` older than 1.1.0, point the script at the
 right binary: `SPECIFY_BIN=/path/to/specify ./install.sh …`.
 
