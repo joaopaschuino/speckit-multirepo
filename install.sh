@@ -108,9 +108,10 @@ else
   fi
 fi
 
+# Restore the settings under the id actually installed (a pre-0.9.0
+# --release still installs as multi-repo).
 if [ -n "$legacy_config" ]; then
-  mkdir -p "$project/.specify/extensions/multirepo"
-  mv "$legacy_config" "$project/.specify/extensions/multirepo/multirepo-config.yml"
+  mv "$legacy_config" "$project/.specify/extensions/$installed_id/$installed_id-config.yml"
 fi
 
 # Member repositories get the persistent governance pointer in AGENTS.md:
