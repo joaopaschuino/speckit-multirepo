@@ -68,8 +68,24 @@ if [ -d "$legacy" ]; then
     || echo "warning: could not remove the pre-0.9.0 'multi-repo' extension" >&2
 fi
 
+# `extension add` can exit 0 without installing (e.g. a declined prompt);
+# with the legacy install already removed, that must not pass as success.
+installed_id=""
+require_installed() {
+  for id in multirepo multi-repo; do
+    if [ -f "$project/.specify/extensions/$id/extension.yml" ]; then
+      installed_id="$id"
+      return 0
+    fi
+  done
+  echo "error: the extension was not installed." >&2
+  [ -n "$legacy_config" ] && echo "previous settings saved at $legacy_config" >&2
+  exit 1
+}
+
 if [ "$mode" = "dev" ]; then
   "$SPECIFY_BIN" extension add "$src" --dev --force
+  require_installed
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --dev "$src/step/multi-repo-implement" --force
     "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo" --dev
@@ -83,6 +99,7 @@ else
   wf_bootstrap_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-bootstrap/workflow.yml"
   step_zip="https://github.com/$REPO/releases/download/$release/step-multi-repo-implement-$release.zip"
   "$SPECIFY_BIN" extension add multirepo --from "$ext_zip" --force
+  require_installed
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --from "$step_zip" --force
     "$SPECIFY_BIN" workflow add multi-repo --from "$wf_url"
