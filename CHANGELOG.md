@@ -63,9 +63,11 @@ and the custom step type is `multirepo-implement`.
 
 0.x used the id `multi-repo` for the extension, workflows and step. Upgrade
 the central repository and every member together, after finishing paused 0.x
-runs (they cannot be resumed afterwards), by re-running `install.sh`: it
-removes the `multi-repo` extension, carries `multi-repo-config.yml` over to
-`multirepo-config.yml` (backed up in `.specify/multirepo-migration/` until
-then; an edited `multirepo-config.yml` is kept) and, on the central
-repository, removes the `multi-repo*` workflows and the `multi-repo-implement`
+runs (they cannot be resumed afterwards), by re-running `install.sh`. It
+installs and checks 1.0.0 first; only then does it remove the `multi-repo`
+extension, carry `multi-repo-config.yml` over to `multirepo-config.yml` (backed
+up in `.specify/multirepo-migration/` until then; an edited
+`multirepo-config.yml` is kept) and, on the central repository, save the 0.x
+workflow definitions to `.specify/multirepo-migration/workflows/` and remove
+the `multi-repo*` workflows and the `multi-repo-implement`
 step. See README → Upgrading an existing workspace.

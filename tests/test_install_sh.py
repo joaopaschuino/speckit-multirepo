@@ -197,6 +197,8 @@ def test_upgrade_central_from_v080(tmp_path):
     for new in ("multirepo", "multirepo-check", "multirepo-bootstrap"):
         assert (workflows / new / "workflow.yml").is_file(), new
     assert (workflows / "steps" / "multirepo-implement" / "__init__.py").is_file()
+    saved = central / ".specify" / "multirepo-migration" / "workflows" / "multi-repo.yml"
+    assert 'id: "multi-repo"' in saved.read_text(encoding="utf-8")
     config = central / ".specify" / "extensions" / "multirepo" / "multirepo-config.yml"
     assert "custom.md" in config.read_text(encoding="utf-8")
 
@@ -226,6 +228,11 @@ def test_failed_upgrade_keeps_legacy_settings(tmp_path):
     backup = member / ".specify" / "multirepo-migration" / "multi-repo-config.yml"
     assert f"0.x settings saved at {backup}" in result.stderr
     assert "custom.md" in backup.read_text(encoding="utf-8")
+    # 0.x keeps working until 1.0.0 is really installed
+    assert "left in place" in result.stderr
+    legacy = member / ".specify" / "extensions" / "multi-repo"
+    assert "custom.md" in (legacy / "multi-repo-config.yml").read_text(encoding="utf-8")
+    assert "speckit.multi-repo." in (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
 
     # the next successful run restores them
     result = run_install("member", member)
@@ -233,3 +240,30 @@ def test_failed_upgrade_keeps_legacy_settings(tmp_path):
     config = member / ".specify" / "extensions" / "multirepo" / "multirepo-config.yml"
     assert "custom.md" in config.read_text(encoding="utf-8")
     assert not backup.exists()
+    assert not legacy.exists()
+
+
+def test_declined_workflow_upgrade_keeps_legacy_workflows(tmp_path):
+    central = init_project(tmp_path / "central")
+    install_v080(tmp_path, "central", central)
+    fake = tmp_path / "fake-specify"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        '[ "$1 $2" = "workflow add" ] && exit 0\n'
+        f'exec "{SPECIFY_BIN}" "$@"\n',
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "central", str(central), "--dev"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        env={**os.environ, "SPECIFY_BIN": str(fake)},
+    )
+    assert result.returncode != 0
+    assert "not installed: multirepo multirepo-check multirepo-bootstrap" in result.stderr
+    workflows = central / ".specify" / "workflows"
+    for old in ("multi-repo", "multi-repo-check", "multi-repo-bootstrap", "steps/multi-repo-implement"):
+        assert (workflows / old).exists(), old
+    assert (central / ".specify" / "extensions" / "multi-repo").is_dir()

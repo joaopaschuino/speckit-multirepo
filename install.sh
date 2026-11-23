@@ -55,22 +55,21 @@ project="$(cd "$project" && pwd)"
 cd "$project"
 
 # 0.x installed everything under the id `multi-repo`. Its settings are kept
-# in the project (so a failed install cannot lose them), the old extension is
-# removed, and the settings are restored once the new one is installed —
-# never over a multirepo-config.yml that was edited.
+# in the project, 1.0.0 is installed and verified next to it, and only then is
+# 0.x removed — so a failed or declined install leaves 0.x working. The
+# settings are restored, never over a multirepo-config.yml that was edited.
 legacy_dir="$project/.specify/extensions/multi-repo"
 backup_dir="$project/.specify/multirepo-migration"
 backup="$backup_dir/multi-repo-config.yml"
 new_config="$project/.specify/extensions/multirepo/multirepo-config.yml"
 legacy_workflows="multi-repo multi-repo-check multi-repo-bootstrap"
+new_workflows="multirepo multirepo-check multirepo-bootstrap"
 if [ -d "$legacy_dir" ]; then
   echo "migrating the 0.x 'multi-repo' install to multirepo"
   if [ -f "$legacy_dir/multi-repo-config.yml" ] && [ ! -f "$backup" ]; then
     mkdir -p "$backup_dir"
     cp "$legacy_dir/multi-repo-config.yml" "$backup"
   fi
-  "$SPECIFY_BIN" extension remove multi-repo --force \
-    || echo "warning: could not remove the 0.x 'multi-repo' extension" >&2
 fi
 if [ "$role" = "central" ]; then
   for state in "$project"/.specify/workflows/runs/*/state.json; do
@@ -94,9 +93,17 @@ restore_legacy_config() {
   echo "restored the 0.x settings to $new_config"
 }
 remove_legacy_workflows() {
-  local id
+  local id def
   for id in $legacy_workflows; do
     if [ -d "$project/.specify/workflows/$id" ]; then
+      # Local edits to a 0.x workflow (e.g. input defaults) are not carried
+      # into the 1.0.0 one; keep a copy to reapply them by hand.
+      def="$project/.specify/workflows/$id/workflow.yml"
+      if [ -f "$def" ]; then
+        mkdir -p "$backup_dir/workflows"
+        cp "$def" "$backup_dir/workflows/$id.yml"
+        echo "note: saved the 0.x workflow '$id' to $backup_dir/workflows/$id.yml"
+      fi
       "$SPECIFY_BIN" workflow remove "$id" \
         || echo "warning: could not remove the 0.x workflow '$id'" >&2
     fi
@@ -118,16 +125,35 @@ ext_version() {
 require_installed() {
   if [ ! -f "$ext_manifest" ]; then
     echo "error: the extension was not installed." >&2
-    [ -f "$backup" ] && echo "0.x settings saved at $backup" >&2
+    legacy_kept
     exit 1
   fi
   local expected="$1" got
   got="$(ext_version "$ext_manifest")"
   if [ -n "$expected" ] && [ "$got" != "$expected" ]; then
     echo "error: the extension was not installed (found version $got, expected $expected)." >&2
-    [ -f "$backup" ] && echo "0.x settings saved at $backup" >&2
+    legacy_kept
     exit 1
   fi
+}
+# `workflow add`/`step add` also exit 0 on a declined trust prompt; the 0.x
+# workflows are only removed once the new ones are really in place.
+require_workflows() {
+  local id missing=""
+  for id in $new_workflows; do
+    [ -f "$project/.specify/workflows/$id/workflow.yml" ] || missing="$missing $id"
+  done
+  [ -d "$project/.specify/workflows/steps/multirepo-implement" ] || missing="$missing multirepo-implement(step)"
+  if [ -n "$missing" ]; then
+    echo "error: not installed:$missing" >&2
+    legacy_kept
+    exit 1
+  fi
+}
+legacy_kept() {
+  [ -d "$legacy_dir" ] && echo "the 0.x 'multi-repo' install was left in place; re-run to retry" >&2
+  [ -f "$backup" ] && echo "0.x settings saved at $backup" >&2
+  return 0
 }
 
 if [ "$mode" = "dev" ]; then
@@ -138,6 +164,7 @@ if [ "$mode" = "dev" ]; then
     "$SPECIFY_BIN" workflow add "$src/workflow/multirepo" --dev
     "$SPECIFY_BIN" workflow add "$src/workflow/multirepo-check" --dev
     "$SPECIFY_BIN" workflow add "$src/workflow/multirepo-bootstrap" --dev
+    require_workflows
   fi
 else
   ext_zip="https://github.com/$REPO/archive/refs/tags/$release.zip"
@@ -152,9 +179,14 @@ else
     "$SPECIFY_BIN" workflow add multirepo --from "$wf_url"
     "$SPECIFY_BIN" workflow add multirepo-check --from "$wf_check_url"
     "$SPECIFY_BIN" workflow add multirepo-bootstrap --from "$wf_bootstrap_url"
+    require_workflows
   fi
 fi
 
+if [ -d "$legacy_dir" ]; then
+  "$SPECIFY_BIN" extension remove multi-repo --force \
+    || echo "warning: could not remove the 0.x 'multi-repo' extension" >&2
+fi
 restore_legacy_config
 if [ "$role" = "central" ]; then
   remove_legacy_workflows

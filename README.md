@@ -133,15 +133,20 @@ upgrade (the script warns about any it finds). Then run the same
 it:
 
 1. saves `multi-repo-config.yml` to `.specify/multirepo-migration/`;
-2. removes the `multi-repo` extension (its `speckit.multi-repo.*` commands,
-   skills and hook);
-3. installs 1.0.0 and moves the saved settings to `multirepo-config.yml`
-   (an already edited `multirepo-config.yml` is kept; the backup stays);
-4. on the central repository, removes the `multi-repo`, `multi-repo-check`
-   and `multi-repo-bootstrap` workflows and the `multi-repo-implement` step.
+2. installs 1.0.0 next to 0.x and checks it (on the central repository, also
+   the new workflows and step);
+3. only then removes the `multi-repo` extension (its `speckit.multi-repo.*`
+   commands, skills and hook) and moves the saved settings to
+   `multirepo-config.yml` (an already edited `multirepo-config.yml` is kept;
+   the backup stays);
+4. on the central repository, saves each 0.x `workflow.yml` to
+   `.specify/multirepo-migration/workflows/<id>.yml` and removes the
+   `multi-repo`, `multi-repo-check` and `multi-repo-bootstrap` workflows and
+   the `multi-repo-implement` step. Edits you made to a 0.x workflow (e.g.
+   input defaults) are not carried over; reapply them from that copy.
 
-If the install fails after step 2, the settings stay in
-`.specify/multirepo-migration/` and the next successful run restores them.
+If the install fails or a trust prompt is declined, 0.x is left in place and
+working, and re-running the script retries the upgrade.
 Old runs remain under `.specify/workflows/runs/` but `--report-only` ignores
 them. Re-run `specify workflow run multirepo-check` to verify.
 
