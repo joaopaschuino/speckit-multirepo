@@ -124,11 +124,12 @@ a release may carry an `Upgrade` section with extra steps (for example
 manifest format changes).
 
 **Coming from a 0.x release?** 1.0.0 is a new installation, not an
-upgrade: the extension id changed from `multi-repo` to `multirepo`. Remove the old extension, then install 1.0.0 as on
-a fresh repository. `install.sh` copies the settings in
-`.specify/extensions/multi-repo/multi-repo-config.yml` (when present) to
-`multirepo-config.yml` once. Run `extension remove` **inside the member**
-(it targets the current directory):
+upgrade: the extension id changed from `multi-repo` to `multirepo`, and
+nothing is migrated. Remove the old extension, then install 1.0.0 as on
+a fresh repository (settings saved in
+`.specify/extensions/multi-repo/multi-repo-config.yml` are not carried
+over — set them again in `multirepo-config.yml` if you need them). Run
+`extension remove` **inside the member** (it targets the current directory):
 
 ```sh
 (cd /path/to/member-repo && specify extension remove multi-repo)

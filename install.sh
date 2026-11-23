@@ -75,22 +75,9 @@ require_installed() {
   fi
 }
 
-# 0.x installed the extension as `multi-repo`; carry its saved settings
-# over to the new id once, so standalone implement keeps its defaults.
-migrate_legacy_config() {
-  local old="$project/.specify/extensions/multi-repo/multi-repo-config.yml"
-  local new="$project/.specify/extensions/multirepo/multirepo-config.yml"
-  if [ -f "$old" ] && [ ! -f "$new.migrated-from-0.x" ]; then
-    cp "$old" "$new"
-    : > "$new.migrated-from-0.x"
-    echo "migrated settings from $old to $new"
-  fi
-}
-
 if [ "$mode" = "dev" ]; then
   "$SPECIFY_BIN" extension add "$src" --dev --force
   require_installed "$(ext_version "$src/extension.yml")"
-  migrate_legacy_config
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --dev "$src/step/multi-repo-implement" --force
     "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo" --dev
@@ -105,7 +92,6 @@ else
   step_zip="https://github.com/$REPO/releases/download/$release/step-multi-repo-implement-$release.zip"
   "$SPECIFY_BIN" extension add multirepo --from "$ext_zip" --force
   require_installed "${release#v}"
-  migrate_legacy_config
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --from "$step_zip" --force
     "$SPECIFY_BIN" workflow add multi-repo --from "$wf_url"
