@@ -22,8 +22,10 @@ This repository is the **central specs repository** of a multirepo workspace. Th
 
 1. Run `{SCRIPT}` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute.
 
-2. **Load the workspace manifest**: read `.specify/workspace.yml` from the repo root. If it does not exist or cannot be parsed, **STOP** with:
-   `No workspace manifest found at .specify/workspace.yml. This command must run in the central specs repository of a multirepo workspace (see the multirepo extension README).`
+2. **Load the workspace manifest**: read `.specify/workspace.yml` from the repo root.
+   - If it does not exist, this is not the central specs repository (e.g. a member, where the mandatory `after_tasks` hook also runs this command). End without changing any file, and say:
+     `No workspace manifest at .specify/workspace.yml — not the central specs repository, so tasks.md is left as is (no multirepo split).`
+   - If it exists but cannot be parsed, **STOP** with the parse error.
    Note each member's `id`, `path`, `tasks_file` (default `tasks/<id>.md`), and `depends_on`.
 
 3. Read `FEATURE_DIR/tasks.md` (the task list produced by the standard tasks command) and, for context, `FEATURE_DIR/spec.md` and `FEATURE_DIR/plan.md` if they exist. When `.specify/memory/domain.md` exists (written by `/speckit.multirepo.domain`), read it too: the domain map says which members communicate over which channel, which helps assign integration tasks to the right owner and spot contract tasks. When `specs/baseline/<id>/spec.md` exists for a member (written by `/speckit.multirepo.reverse`), read it too — its Interfaces, Data model, Behaviors, Requirements, and External dependencies sections; skip the evidence detail. A baseline describes what the member already does. Use it in two ways only:
