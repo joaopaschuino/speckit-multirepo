@@ -66,7 +66,9 @@ legacy_workflows="multi-repo multi-repo-check multi-repo-bootstrap"
 new_workflows="multirepo multirepo-check multirepo-bootstrap"
 if [ -d "$legacy_dir" ]; then
   echo "migrating the 0.x 'multi-repo' install to multirepo"
-  if [ -f "$legacy_dir/multi-repo-config.yml" ] && [ ! -f "$backup" ]; then
+  # 0.x is still installed and in use, so its settings are the current ones
+  # (a backup left by a failed attempt may be stale).
+  if [ -f "$legacy_dir/multi-repo-config.yml" ]; then
     mkdir -p "$backup_dir"
     cp "$legacy_dir/multi-repo-config.yml" "$backup"
   fi

@@ -234,11 +234,15 @@ def test_failed_upgrade_keeps_legacy_settings(tmp_path):
     assert "custom.md" in (legacy / "multi-repo-config.yml").read_text(encoding="utf-8")
     assert "speckit.multi-repo." in (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
 
+    # 0.x settings edited after the failed attempt win over its stale backup
+    (legacy / "multi-repo-config.yml").write_text(
+        "implement:\n  tasks_file: later.md\n", encoding="utf-8"
+    )
     # the next successful run restores them
     result = run_install("member", member)
     assert result.returncode == 0, result.stderr
     config = member / ".specify" / "extensions" / "multirepo" / "multirepo-config.yml"
-    assert "custom.md" in config.read_text(encoding="utf-8")
+    assert "later.md" in config.read_text(encoding="utf-8")
     assert not backup.exists()
     assert not legacy.exists()
 
