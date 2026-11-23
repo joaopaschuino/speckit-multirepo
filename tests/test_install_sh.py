@@ -142,3 +142,64 @@ def test_upgrade_from_pre_rename_multi_repo_install(tmp_path):
     assert "custom.md" in (new / "multirepo-config.yml").read_text(encoding="utf-8")
     installed = (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
     assert "speckit.multirepo.tasks" in installed
+
+
+def _install_v080_member(tmp_path: Path) -> tuple[Path, Path]:
+    tag = subprocess.run(
+        ["git", "-C", str(PACKAGE_ROOT), "archive", "v0.8.0"],
+        capture_output=True,
+    )
+    if tag.returncode != 0:
+        pytest.skip("v0.8.0 tag not available in this checkout")
+    old_src = tmp_path / "old"
+    old_src.mkdir()
+    subprocess.run(["tar", "-x", "-C", str(old_src)], input=tag.stdout, check=True)
+    member = init_project(tmp_path / "member")
+    result = subprocess.run(
+        ["bash", str(old_src / "install.sh"), "member", str(member), "--dev", str(old_src)],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        env={**os.environ, "SPECIFY_BIN": SPECIFY_BIN},
+    )
+    assert result.returncode == 0, result.stderr
+    legacy = member / ".specify" / "extensions" / "multi-repo"
+    (legacy / "multi-repo-config.yml").write_text("implement:\n  tasks_file: custom.md\n", encoding="utf-8")
+    return member, old_src
+
+
+def test_reinstall_of_pre_rename_source_keeps_settings_under_its_id(tmp_path):
+    member, old_src = _install_v080_member(tmp_path)
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "member", str(member), "--dev", str(old_src)],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        env={**os.environ, "SPECIFY_BIN": SPECIFY_BIN},
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    legacy = member / ".specify" / "extensions" / "multi-repo"
+    assert "custom.md" in (legacy / "multi-repo-config.yml").read_text(encoding="utf-8")
+    assert not (member / ".specify" / "extensions" / "multirepo").exists()
+
+
+def test_upgrade_fails_when_extension_add_installs_nothing(tmp_path):
+    member, _ = _install_v080_member(tmp_path)
+    fake = tmp_path / "fake-specify"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        '[ "$1 $2" = "extension add" ] && exit 0\n'
+        f'exec "{SPECIFY_BIN}" "$@"\n',
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "member", str(member), "--dev"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        env={**os.environ, "SPECIFY_BIN": str(fake)},
+    )
+    assert result.returncode != 0
+    assert "the extension was not installed" in result.stderr
+    assert "previous settings saved at" in result.stderr
