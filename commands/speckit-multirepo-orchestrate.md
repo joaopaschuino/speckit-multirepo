@@ -156,6 +156,6 @@ Answer in the user's language, briefly:
 - **The absolute path of `<FEATURE_DIR>/verification/report.html`** — always, on every run that wrote it.
 - Next step, by outcome:
   - all verified, run `completed` → review the members' diffs and open their PRs (each member's change is a pure implementation diff);
-  - a member `failed` → fix it in that member repository (the report's *Requires attention* section and `verification/<member>.feedback.md` say what broke), then `specify workflow resume <run_id>` in this central repository — or run this command again (`specify workflow resume` skips members whose task files are fully checked off and whose checks pass);
+  - a member `failed` → fix it in that member repository (the report's *Requires attention* section and `verification/<member>.feedback.md` say what broke), then run this command again: the new run skips members whose task files are fully checked off and whose checks still pass (`skip_completed`), and rewrites `report.html`. A manual `specify workflow resume <run_id>` refreshes only `report.md`, not the HTML — if the user prefers it, tell them to re-run this command afterwards to get an up-to-date `report.html`;
   - `missing` / `not-ready` members → `multi-repo-bootstrap`, or remove `ready: false` and run again;
   - review rejected (`aborted`) → the dispatched code stays in the members; nothing was merged.
