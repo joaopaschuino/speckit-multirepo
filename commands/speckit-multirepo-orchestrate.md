@@ -18,7 +18,7 @@ Accepted forms (tokens in any order):
 
 - `<feature-dir>` — the feature to orchestrate, a path under `specs/` (relative to the repo root, e.g. `specs/001-orders`, or absolute). Default: the active feature.
 - `--auto` — non-interactive mode: the workflow's gates (`confirm`, `review`) are pre-approved and nothing is asked; the final report is still written and shown.
-- `--report-only [<run_id>]` — dispatch nothing: rebuild `verification/report.html` from an existing run (default: the most recent run under `.specify/workflows/runs/` whose `state.json` has `workflow_id` `multi-repo` and whose `inputs.json` → `.inputs.feature` is this feature). Do Steps 1, 5 and 6 only — use it after a manual `specify workflow resume`, which refreshes `report.md` but not the HTML.
+- `--report-only` — dispatch nothing: rebuild `verification/report.html` from this feature's **latest** `multi-repo` run — the one whose results are in the current `verification/report.md` (each run overwrites it, so older runs cannot be rendered). Do Steps 1, 5 and 6 only — use it after a manual `specify workflow resume`, which refreshes `report.md` but not the HTML.
 - Any other text is a note from the user (for example "only report, the review is mine"); honor it when it does not contradict the rules below.
 
 ## Purpose
@@ -36,7 +36,7 @@ Scope rules that apply in every mode:
 1. Confirm this is the central repository: `.specify/workspace.yml` must exist. If it does not, **STOP** with: `No workspace manifest at .specify/workspace.yml — run this command in the central specs repository (see /speckit.multirepo.workspace).`
 2. If `$ARGUMENTS` names a feature directory, use it. Otherwise run `{SCRIPT}` from the repo root and take FEATURE_DIR from its JSON output. If neither yields a directory, **STOP** and ask the user for the feature path (with `--auto`: stop with the error).
 3. Let FEATURE_DIR be the absolute path and FEATURE_REL its path relative to the repo root (POSIX separators) — the workflow input uses FEATURE_REL. FEATURE_DIR must exist.
-4. With `--report-only`, resolve the run id (see User Input; none found → **STOP** and say so), then go straight to Step 5 and Step 6.
+4. With `--report-only`, take as `<run_id>` the run under `.specify/workflows/runs/` with the greatest `updated_at` among those whose `state.json` has `workflow_id` `multi-repo` and `.step_results.implement.output.feature` equal to FEATURE_DIR (the step records the resolved feature there, also when the run used the active feature). None found → **STOP**: `No multi-repo run found for <FEATURE_REL> — run this command without --report-only.` Otherwise go straight to Step 5 and Step 6.
 
 ## Step 2 — Precondition: per-member task files exist
 
@@ -158,6 +158,6 @@ Answer in the user's language, briefly:
 - **The absolute path of `<FEATURE_DIR>/verification/report.html`** — always, on every run that wrote it.
 - Next step, by outcome:
   - all verified, run `completed` → review the members' diffs and open their PRs (each member's change is a pure implementation diff);
-  - a member `failed` → fix it in that member repository (the report's *Requires attention* section and `verification/<member>.feedback.md` say what broke), then run this command again: the new run skips members whose task files are fully checked off and whose checks still pass (`skip_completed`), and rewrites `report.html`. A manual `specify workflow resume <run_id>` refreshes only `report.md`, not the HTML — after one, run this command with `--report-only <run_id>` to rebuild `report.html` from that run without dispatching again;
+  - a member `failed` → fix it in that member repository (the report's *Requires attention* section and `verification/<member>.feedback.md` say what broke), then run this command again: the new run skips members whose task files are fully checked off and whose checks still pass (`skip_completed`), and rewrites `report.html`. A manual `specify workflow resume <run_id>` refreshes only `report.md`, not the HTML — after one, run this command with `--report-only` to rebuild `report.html` from that run without dispatching again;
   - `missing` / `not-ready` members → `multi-repo-bootstrap`, or remove `ready: false` and run again;
   - review rejected (`aborted`) → the dispatched code stays in the members; nothing was merged.
