@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The commands' `scripts:` front matter names `scripts/bash/check-prerequisites.sh`
+  (and the PowerShell and Python variants), which Spec Kit resolves inside the
+  installed extension, but the package did not ship them: the first step of
+  `/speckit.multi-repo.tasks`, `.implement` and `.help` exited 127. The package
+  now ships thin wrappers that delegate to the project's core scripts in
+  `.specify/scripts/`.
+- A member whose Verification commands all pass while its task file still has
+  open `- [ ]` tasks is no longer reported `verified`: its verification status
+  and Status column become `incomplete`, the step fails for it, and a retry
+  (`verify_retries`) gets feedback listing the open tasks.
+- `/speckit.multi-repo.tasks` re-runs reset a member to `pending` when its task
+  file gets new open tasks (a re-split, converge gaps, review findings), instead
+  of keeping `verified`.
+- The `after_tasks` hook is mandatory (`optional: false`): the core tasks
+  command rewrites `tasks.md` and drops the orchestration table, which only the
+  split rebuilds.
+
+### Changed (tests)
+
+- The fake agents of the test suite check off the dispatched member's tasks,
+  as a real agent does (`leave_open` / a `leave-open` sentinel keeps them open).
+
 ## [0.8.0] - 2026-11-16
 
 ### Added

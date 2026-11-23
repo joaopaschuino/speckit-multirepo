@@ -661,7 +661,7 @@ class MultiRepoImplementStep(StepBase):
             groups.setdefault(status, []).append(member_id)
         return "; ".join(
             f"{status}: {', '.join(groups[status])}"
-            for status in ("verified", "failed", "skipped")
+            for status in ("verified", "incomplete", "failed", "skipped")
             if status in groups
         )
 
@@ -673,6 +673,8 @@ class MultiRepoImplementStep(StepBase):
         if verification.get("status") == "failed":
             failing = [c["name"] for c in verification.get("commands", []) if c["status"] != "passed"]
             return f"verification failed: {', '.join(failing)}"
+        if verification.get("status") == "incomplete":
+            return f"{len(verification.get('open_tasks') or [])} task(s) still open"
         return f"exit {result['exit_code']}"
 
     @staticmethod
@@ -974,15 +976,30 @@ class MultiRepoImplementStep(StepBase):
                 return result
             outcome = verify(f"after dispatch {attempt}")
             if outcome["status"] == "verified":
-                result["status"] = "completed"
-                set_status("verified")
-                return result
+                # Passing checks are not enough while the agent left tasks
+                # open: the member is not done, whatever its report says.
+                open_tasks = self._open_tasks(tasks_path)
+                if not open_tasks:
+                    result["status"] = "completed"
+                    set_status("verified")
+                    return result
+                outcome["status"] = "incomplete"
+                outcome["open_tasks"] = open_tasks
             feedback = write_feedback(
                 feedback_path, member.id, member.tasks_file, outcome, log_path
             )
 
-        failing = [c["name"] for c in result["verification"]["commands"] if c["status"] != "passed"]
         result["status"] = "failed"
+        open_tasks = result["verification"].get("open_tasks") or []
+        if result["verification"]["status"] == "incomplete":
+            result["error"] = (
+                f"checks passed but {len(open_tasks)} task(s) are still open after "
+                f"{result['attempts']} dispatch(es): {', '.join(open_tasks[:5])}"
+                f"{' …' if len(open_tasks) > 5 else ''} (tasks file: {member.tasks_file})"
+            )
+            set_status("incomplete")
+            return result
+        failing = [c["name"] for c in result["verification"]["commands"] if c["status"] != "passed"]
         result["error"] = (
             f"verification failed after {result['attempts']} dispatch(es): "
             f"{', '.join(failing)} (log: {log_path})"
@@ -1038,6 +1055,19 @@ class MultiRepoImplementStep(StepBase):
         if stderr:
             result["error"] = stderr.splitlines()[-1]
         return False
+
+    @staticmethod
+    def _open_tasks(tasks_path: Path) -> list[str]:
+        """Open ``- [ ]`` task lines of the member task file (empty when unreadable)."""
+        try:
+            text = tasks_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            return []
+        return [
+            line.strip()[len("- [ ]"):].strip().split(" ", 1)[0]
+            for line in text.splitlines()
+            if re.match(r"^\s*[-*]\s+\[ \]", line)
+        ]
 
     @staticmethod
     def _tasks_completed(tasks_path: Path) -> bool:

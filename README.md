@@ -42,7 +42,8 @@ central specs repo                    member repos
    every exit code matches (optionally re-dispatching the agent with the
    failure log, `verify_retries`). Contract-check members verify cross-repo
    contracts after their producers. The orchestration page's Status column
-   follows along (`dispatched → verified | failed`).
+   follows along (`dispatched → verified | incomplete | failed`; `incomplete`:
+   every check passed but the task file still has open `- [ ]` tasks).
 5. The workflow's gates keep a human in the loop (the review gate shows the
    verification report); `workflow resume` picks up after a member failure,
    skipping members whose task files are fully checked off and whose checks

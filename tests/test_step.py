@@ -40,7 +40,7 @@ def workspace_setup(tmp_path):
     return central, members, feature
 
 
-def patch_integration(monkeypatch, calls, fail_repos=None):
+def patch_integration(monkeypatch, calls, fail_repos=None, leave_open=None):
     """Point get_integration at a FakeIntegration.
 
     The step imports get_integration lazily inside its methods, so patching
@@ -49,7 +49,7 @@ def patch_integration(monkeypatch, calls, fail_repos=None):
     """
     import specify_cli.integrations as integrations_module
 
-    fake = FakeIntegration(calls, fail_repos)
+    fake = FakeIntegration(calls, fail_repos, leave_open)
     monkeypatch.setattr(integrations_module, "get_integration", lambda key: fake)
 
 
@@ -836,8 +836,8 @@ def verified_tasks(*commands: str) -> str:
 class ScriptedIntegration(FakeIntegration):
     """FakeIntegration with a per-member side effect run on each dispatch."""
 
-    def __init__(self, calls, effects):
-        super().__init__(calls)
+    def __init__(self, calls, effects, leave_open=None):
+        super().__init__(calls, leave_open=leave_open)
         self._effects = effects
 
     def dispatch_command(self, command_name, args="", *, project_root=None, **kwargs):
@@ -848,10 +848,10 @@ class ScriptedIntegration(FakeIntegration):
         return result
 
 
-def patch_scripted(monkeypatch, calls, effects):
+def patch_scripted(monkeypatch, calls, effects, leave_open=None):
     import specify_cli.integrations as integrations_module
 
-    fake = ScriptedIntegration(calls, effects)
+    fake = ScriptedIntegration(calls, effects, leave_open)
     monkeypatch.setattr(integrations_module, "get_integration", lambda key: fake)
 
 
@@ -1341,3 +1341,58 @@ def test_watchdog_kills_descendants_in_another_session(step_module, tmp_path):
             )
     time.sleep(2.5)
     assert not (tmp_path / "late-write").exists()
+
+
+def test_passing_checks_with_open_tasks_are_incomplete(
+    workspace_setup, step_module, monkeypatch, dispatch_calls
+):
+    """Exit codes alone do not make a member verified while tasks stay open."""
+    central, members, feature = workspace_setup
+    (feature / "tasks.md").write_text(ORCHESTRATION_PAGE, encoding="utf-8")
+    (feature / "tasks" / "s3.md").write_text(verified_tasks("test: `true`"), encoding="utf-8")
+    patch_integration(monkeypatch, dispatch_calls, leave_open={S3})
+
+    result = run_step(step_module, central, feature, verify_retries=1)
+
+    assert result.status == step_module.StepStatus.FAILED
+    assert "s3 (1 task(s) still open)" in result.error
+    s3 = {r["repo"]: r for r in result.output["results"]}["s3"]
+    assert s3["status"] == "failed"
+    assert s3["attempts"] == 2
+    assert s3["verification"]["status"] == "incomplete"
+    assert s3["verification"]["open_tasks"] == ["T001"]
+    assert "checks passed but 1 task(s) are still open after 2 dispatch(es): T001" in s3["error"]
+    feedback = (feature / "verification" / "s3.feedback.md").read_text(encoding="utf-8")
+    assert "Open tasks — 1 still unchecked" in feedback and "T001" in feedback
+    assert dispatch_calls[1]["args"].endswith("s3.feedback.md")
+    assert result.output["verification"] == {"s3": "incomplete"}
+    assert "incomplete: s3" in result.output["verification_summary"]
+    assert "| s3 | tasks/s3.md | — | incomplete |" in (feature / "tasks.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_open_tasks_closed_on_retry_are_verified(
+    workspace_setup, step_module, monkeypatch, dispatch_calls
+):
+    central, members, feature = workspace_setup
+    (feature / "tasks.md").write_text(ORCHESTRATION_PAGE, encoding="utf-8")
+    tasks = feature / "tasks" / "s3.md"
+    tasks.write_text(verified_tasks("test: `true`"), encoding="utf-8")
+
+    def close_on_retry(_root, args, _kwargs):
+        if args.endswith("feedback.md"):
+            tasks.write_text(tasks.read_text(encoding="utf-8").replace("- [ ]", "- [X]"), encoding="utf-8")
+
+    patch_scripted(monkeypatch, dispatch_calls, {S3: close_on_retry}, leave_open={S3})
+
+    result = run_step(step_module, central, feature, verify_retries=1)
+
+    s3 = {r["repo"]: r for r in result.output["results"]}["s3"]
+    assert result.status == step_module.StepStatus.COMPLETED, result.error
+    assert s3["status"] == "completed"
+    assert s3["verification"]["status"] == "verified"
+    assert s3["attempts"] == 2
+    assert "| s3 | tasks/s3.md | — | verified |" in (feature / "tasks.md").read_text(
+        encoding="utf-8"
+    )

@@ -31,7 +31,9 @@ def fake_agent(tmp_path, monkeypatch):
     Appends one record per invocation to $FAKE_AGENT_LOG and exits 1 when a
     ``fail-agent`` sentinel file exists in the working directory. With a
     ``fix-on-feedback`` sentinel, a retry dispatch (verification feedback
-    file among the args) creates ``fixed``; ``hang-agent`` makes it start a
+    file among the args) creates ``fixed``. A successful run checks off the
+    tasks of the dispatched task file, unless a ``leave-open`` sentinel
+    exists; ``hang-agent`` makes it start a
     background child that writes ``late-write`` after 4s, then hang.
     """
     log = tmp_path / "agent-log.jsonl"
@@ -55,6 +57,11 @@ def fake_agent(tmp_path, monkeypatch):
         "fi\n"
         "if [ -f fail-agent ]; then\n"
         "  exit 1\n"
+        "fi\n"
+        "tf=$(printf '%s' \"$*\" | grep -o 'tasks/[A-Za-z0-9_.-]*[.]md' | head -n 1)\n"
+        "f=\"${SPECIFY_FEATURE_DIRECTORY:-}/$tf\"\n"
+        "if [ -n \"$tf\" ] && [ -f \"$f\" ] && [ ! -f leave-open ]; then\n"
+        "  sed 's/^\\([[:space:]]*[-*][[:space:]]*\\)\\[ \\]/\\1[X]/' \"$f\" > \"$f.tmp\" && mv \"$f.tmp\" \"$f\"\n"
         "fi\n"
         "exit 0\n",
         encoding="utf-8",
@@ -140,6 +147,8 @@ def test_install_run_and_resume(central):
 
     # -- first run: lambda fails (sentinel), run fails ---------------------
     (lambda_repo / "fail-agent").write_text("", encoding="utf-8")
+    # s3 (no Verification section) leaves its task open, so resume re-runs it.
+    (root / "repo-s3" / "leave-open").write_text("", encoding="utf-8")
     result = invoke_specify(
         [
             "workflow", "run", "multi-repo",
