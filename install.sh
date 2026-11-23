@@ -56,16 +56,41 @@ cd "$project"
 
 # `extension add` can exit 0 without installing (e.g. a declined prompt);
 # that must not pass as success.
+# An already-installed manifest is not enough either: it must carry the
+# version being installed, or a declined upgrade would pass silently.
+ext_manifest="$project/.specify/extensions/multirepo/extension.yml"
+ext_version() {
+  sed -n 's/^[[:space:]]*version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$1" | head -n 1
+}
 require_installed() {
-  if [ ! -f "$project/.specify/extensions/multirepo/extension.yml" ]; then
+  if [ ! -f "$ext_manifest" ]; then
     echo "error: the extension was not installed." >&2
     exit 1
+  fi
+  local expected="$1" got
+  got="$(ext_version "$ext_manifest")"
+  if [ -n "$expected" ] && [ "$got" != "$expected" ]; then
+    echo "error: the extension was not installed (found version $got, expected $expected)." >&2
+    exit 1
+  fi
+}
+
+# 0.x installed the extension as `multi-repo`; carry its saved settings
+# over to the new id once, so standalone implement keeps its defaults.
+migrate_legacy_config() {
+  local old="$project/.specify/extensions/multi-repo/multi-repo-config.yml"
+  local new="$project/.specify/extensions/multirepo/multirepo-config.yml"
+  if [ -f "$old" ] && [ ! -f "$new.migrated-from-0.x" ]; then
+    cp "$old" "$new"
+    : > "$new.migrated-from-0.x"
+    echo "migrated settings from $old to $new"
   fi
 }
 
 if [ "$mode" = "dev" ]; then
   "$SPECIFY_BIN" extension add "$src" --dev --force
-  require_installed
+  require_installed "$(ext_version "$src/extension.yml")"
+  migrate_legacy_config
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --dev "$src/step/multi-repo-implement" --force
     "$SPECIFY_BIN" workflow add "$src/workflow/multi-repo" --dev
@@ -79,7 +104,8 @@ else
   wf_bootstrap_url="https://raw.githubusercontent.com/$REPO/$release/workflow/multi-repo-bootstrap/workflow.yml"
   step_zip="https://github.com/$REPO/releases/download/$release/step-multi-repo-implement-$release.zip"
   "$SPECIFY_BIN" extension add multirepo --from "$ext_zip" --force
-  require_installed
+  require_installed "${release#v}"
+  migrate_legacy_config
   if [ "$role" = "central" ]; then
     "$SPECIFY_BIN" workflow step add multi-repo-implement --from "$step_zip" --force
     "$SPECIFY_BIN" workflow add multi-repo --from "$wf_url"

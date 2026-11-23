@@ -66,7 +66,7 @@ The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's 
   - `no-dispatch` → the member's integration has no headless CLI dispatch; pick an integration that supports it;
   - `constitution-missing` → the `constitution` file declared in the manifest does not exist in the central repository.
   Then **STOP**.
-- **Locally absent members** (`not-cloned`, `not-initialized`) → the default `missing: error` would abort the run. Report them and suggest `specify workflow run multi-repo-bootstrap` (clones members with a manifest `url`). Interactively, offer to continue with `-i missing=skip` (only the ready members are dispatched) and wait for the answer; with `--auto`, **STOP** — never skip members silently.
+- **Locally absent members** (`not-cloned`, `not-initialized`) → the default `missing: error` would abort the run. Report them with the fix for each: `not-cloned` → `specify workflow run multi-repo-bootstrap` (clones members with a manifest `url`); `not-initialized` → the checkout exists but is not a Spec Kit project, so bootstrap does not touch it — run `specify init --here --integration <agent>` in that member, then install the extension there (`install.sh member <path>`). Interactively, offer to continue with `-i missing=skip` (only the ready members are dispatched) and wait for the answer; with `--auto`, **STOP** — never skip members silently.
 - `not_ready` members (held by `ready: false`, with `held_reason`) are reported and are not an error — whatever their status, they are neither configuration errors nor locally absent for this run.
 - Show the dispatch plan: the waves (in order) and the participating members of each.
 
@@ -82,8 +82,10 @@ Dispatches are long: each member may take up to `dispatch_timeout` seconds (defa
    ```sh
    mkdir -p <FEATURE_DIR>/verification
    specify workflow run multi-repo -i feature=<FEATURE_REL> -i confirm=approve [-i review=approve] [-i …] --json \
-     > <FEATURE_DIR>/verification/orchestrate.json 2> <FEATURE_DIR>/verification/orchestrate.log &
+     < /dev/null > <FEATURE_DIR>/verification/orchestrate.json 2> <FEATURE_DIR>/verification/orchestrate.log &
    ```
+
+   Always redirect stdin from `/dev/null`: the workflow pauses the `review` gate only when stdin is not a TTY, and a background job in a job-controlled shell may still inherit the terminal.
 
 3. **Poll** until the process exits: every 30–60 s, read the new lines of `orchestrate.log` and give the user a short progress line (current wave/member, dispatch start/finish, verification attempt) — not the raw log. Read `<FEATURE_DIR>/tasks.md` too: the workflow keeps its Status column current (`dispatched` → `verified` / `completed` / `failed`). Keep polling for as long as the run is alive; only consider it stuck when no log line and no Status change appeared for longer than `dispatch_timeout` — then report it and ask the user whether to keep waiting (with `--auto`: keep waiting; the step's own watchdog kills a dispatch that exceeds `dispatch_timeout`).
 4. **Read the outcome.** `orchestrate.json` holds the run outcome: `run_id`, `status` (`completed` / `paused` / `failed` / `aborted`), `gate` (when paused: `step_id`, `message`, `options`), and `error`. The implement step's output is in the run state, `.specify/workflows/runs/<run_id>/state.json` → `.step_results.implement.output` (`results` per member — `repo`, `status`, `attempts`, `error`, `exit_code`, `timed_out`, `verification` — plus `verification`, `verification_summary`, `verification_report`, `failed`, `missing`, `not_ready`, `waves`, `stopped_after_wave`). If stdout is not valid JSON, report the tail of `orchestrate.log` and **STOP**.
@@ -91,7 +93,7 @@ Dispatches are long: each member may take up to `dispatch_timeout` seconds (defa
 
    ```sh
    specify workflow resume <run_id> -i review=<approve|reject> --json \
-     > <FEATURE_DIR>/verification/orchestrate.json 2>> <FEATURE_DIR>/verification/orchestrate.log
+     < /dev/null > <FEATURE_DIR>/verification/orchestrate.json 2>> <FEATURE_DIR>/verification/orchestrate.log
    ```
 
    (any other paused gate: relay its `gate.message` and `gate.options` the same way, passing the gate's verdict input on resume). With `--auto` no gate pauses; if one does anyway, resume it with `approve` and say so in the report.
@@ -107,7 +109,7 @@ Write it after every run that dispatched (whatever the final status — complete
 - `.step_results.implement.output.results` from the run's `state.json` — fallback for anything the files do not hold (a dispatch failure has no feedback file: use the result's `error`, `exit_code`, `timed_out`);
 - `.step_results.implement.output.waves` and `stopped_after_wave` — when a wave fails the run stops (`stop_on_failure`), so members of later waves have no row in `results` / `report.md`: list each of them as `not dispatched` (reason: `stopped after wave <N+1> failed`).
 
-**With `--report-only`, the run's `state.json` is the primary source.** `report.md` and the feedback files are overwritten by every run of the feature, so they may belong to a different run than `<run_id>`. Take the member set, dispatch and verification status, attempts, and failed checks from `.step_results.implement.output.results` (and `waves` / `stopped_after_wave`) of `<run_id>`. Use `report.md` and `<member>.feedback.md` only to add context, and only when they agree with `state.json` (same members, same statuses); when they do not, ignore them, take the failing checks' details from each result's `verification`, and add a note in the header: `report.md belongs to a different run — details from state.json only`.
+**With `--report-only`, the run's `state.json` is the primary source.** `report.md` and the feedback files are overwritten by every run of the feature, so they may belong to a different run than `<run_id>`. Take the member set, dispatch and verification status, attempts, and failed checks from `.step_results.implement.output.results` (and `waves` / `stopped_after_wave`) of `<run_id>`. Use `report.md` and `<member>.feedback.md` only to add context, and only when they agree with `state.json` — same members, same dispatch and verification statuses, same attempts, and, for every failing check, the same check name and the same exit code / timed-out flag as the result's `verification` (statuses alone do not identify a run); when they do not, ignore them, take the failing checks' details from each result's `verification`, and add a note in the header: `report.md belongs to a different run — details from state.json only`.
 
 Format rules:
 
