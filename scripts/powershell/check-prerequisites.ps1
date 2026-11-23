@@ -1,6 +1,6 @@
 # Delegate to the project's core check-prerequisites.ps1 (see scripts/bash/check-prerequisites.sh).
 $core = Join-Path $PSScriptRoot '..\..\..\..\scripts\powershell\check-prerequisites.ps1'
-if (-not (Test-Path $core)) {
+if (-not (Test-Path -LiteralPath $core)) {
     Write-Error "multirepo: Spec Kit's core check-prerequisites.ps1 not found at .specify/scripts/powershell/ (run specify init)"
     exit 1
 }
