@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -40,6 +41,19 @@ def test_check_prerequisites_reports_missing_core(tmp_path):
     out = subprocess.run(["bash", str(script), "--json"], cwd=root, capture_output=True, text=True)
     assert out.returncode == 1
     assert "core check-prerequisites.sh not found" in out.stderr
+
+
+def test_python_check_prerequisites_propagates_core_exit_code(tmp_path):
+    root = installed_layout(tmp_path)
+    core = root / ".specify" / "scripts" / "python"
+    core.mkdir(parents=True)
+    (core / "check_prerequisites.py").write_text(
+        "import sys\nprint(' '.join(sys.argv[1:]))\nsys.exit(3)\n", encoding="utf-8"
+    )
+    script = root / ".specify" / "extensions" / "multirepo" / "scripts" / "python" / "check_prerequisites.py"
+    out = subprocess.run([sys.executable, str(script), "--json"], cwd=root, capture_output=True, text=True)
+    assert out.returncode == 3
+    assert out.stdout.strip() == "--json"
 
 
 def test_every_command_script_is_shipped():
