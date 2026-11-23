@@ -1364,6 +1364,8 @@ def test_passing_checks_with_open_tasks_are_incomplete(
     assert "checks passed but 1 task(s) are still open after 2 dispatch(es): T001" in s3["error"]
     feedback = (feature / "verification" / "s3.feedback.md").read_text(encoding="utf-8")
     assert "Open tasks — 1 still unchecked" in feedback and "T001" in feedback
+    assert "All checks passed, but tasks remain open" in feedback
+    assert "and some failed" not in feedback
     assert dispatch_calls[1]["args"].endswith("s3.feedback.md")
     assert result.output["verification"] == {"s3": "incomplete"}
     assert "incomplete: s3" in result.output["verification_summary"]
@@ -1386,6 +1388,25 @@ def test_checkboxes_in_examples_are_not_tasks(step_module, tmp_path):
     tasks.write_text(tasks.read_text(encoding="utf-8") + "- [ ] T002 real\n", encoding="utf-8")
     assert step._open_tasks(tasks) == ["T002"]
     assert step._tasks_completed(tasks) is False
+
+
+def test_mixed_width_fences_do_not_hide_tasks(step_module, tmp_path):
+    """A ```` block closes only on a ```` line, not on the next ``` fence."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "````markdown\n```bash\n- [ ] T900 nested example\n```\n````\n"
+        "- [ ] T010 real\n"
+        "```bash\nnpm test\n```\n",
+        encoding="utf-8",
+    )
+    step = step_module.MultiRepoImplementStep
+    assert step._open_tasks(tasks) == ["T010"]
+
+
+def test_unclosed_fence_keeps_tasks(step_module, tmp_path):
+    tasks = tmp_path / "s3.md"
+    tasks.write_text("```bash\n- [ ] T011 after an unclosed fence\n", encoding="utf-8")
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T011"]
 
 
 def test_open_tasks_closed_on_retry_are_verified(

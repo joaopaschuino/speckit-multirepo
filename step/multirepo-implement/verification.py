@@ -43,7 +43,7 @@ RESULT_LOG_TAIL = 2000
 _SECTION_RE = re.compile(r"^##\s+Verification\s*$", re.IGNORECASE | re.MULTILINE)
 _NEXT_HEADING_RE = re.compile(r"^#{1,2}\s", re.MULTILINE)
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-_FENCE_RE = re.compile(r"^\s*(```|~~~).*?^\s*\1\s*$", re.DOTALL | re.MULTILINE)
+_FENCE_OPEN_RE = re.compile(r"^\s*(?P<fence>`{3,}|~{3,})")
 _COMMAND_LINE_RE = re.compile(
     r"^\s*[-*]\s+(?:(?P<name>[^`:\n]+?):\s*)?(?P<tick>`+)(?P<command>.+?)(?P=tick)(?P<rest>.*)$"
 )
@@ -79,7 +79,7 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     following = _NEXT_HEADING_RE.search(body)
     if following is not None:
         body = body[: following.start()]
-    body = _FENCE_RE.sub("", _COMMENT_RE.sub("", body))
+    body = _strip_fences(_COMMENT_RE.sub("", body))
 
     commands: list[VerificationCommand] = []
     for line in body.splitlines():
@@ -101,12 +101,45 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     return commands
 
 
+def _strip_fences(text: str) -> str:
+    """Drop fenced code blocks (CommonMark-style) from *text*.
+
+    A block opens with 3+ backticks or tildes and closes only on a line made
+    of the same character, at least as long as the opener — so a ````
+    block can contain ``` fences. An unclosed block is kept as text: hiding
+    the rest of the file could hide real tasks.
+    """
+    out: list[str] = []
+    pending: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines(keepends=True):
+        match = _FENCE_OPEN_RE.match(line)
+        if fence is None:
+            if match:
+                fence = match.group("fence")
+                pending = [line]
+            else:
+                out.append(line)
+            continue
+        pending.append(line)
+        if (
+            match
+            and line.strip() == match.group("fence")
+            and match.group("fence")[0] == fence[0]
+            and len(match.group("fence")) >= len(fence)
+        ):
+            fence = None
+            pending = []
+    out.extend(pending)
+    return "".join(out)
+
+
 def task_lines(text: str) -> list[str]:
     """Lines of a task file outside HTML comments and fenced code blocks.
 
     Checkboxes inside those are examples, not tasks.
     """
-    return _FENCE_RE.sub("", _COMMENT_RE.sub("", text)).splitlines()
+    return _strip_fences(_COMMENT_RE.sub("", text)).splitlines()
 
 
 def has_task_checkboxes(text: str) -> bool:
@@ -326,13 +359,26 @@ def write_feedback(
     log_path: Path,
 ) -> Path:
     """Write the retry feedback file handed to the member's next dispatch."""
+    any_failed = any(c["status"] != "passed" for c in verification["commands"])
+    if any_failed:
+        intro = [
+            "The multirepo orchestrator ran the objective checks from the",
+            f"`## Verification` section of `{tasks_file}` in this repository after",
+            f"the previous attempt ({verification['label']}), and some failed.",
+            "Fix the implementation so every check exits with its expected code.",
+        ]
+    else:
+        intro = [
+            "All checks passed, but tasks remain open. The multirepo orchestrator",
+            f"ran the objective checks from the `## Verification` section of `{tasks_file}`",
+            f"in this repository after the previous attempt ({verification['label']}),",
+            "and every one exited with its expected code; the open tasks below are",
+            "why this member is dispatched again.",
+        ]
     lines = [
         f"# Verification feedback — {member_id}",
         "",
-        "The multirepo orchestrator ran the objective checks from the",
-        f"`## Verification` section of `{tasks_file}` in this repository after",
-        f"the previous attempt ({verification['label']}), and some failed.",
-        "Fix the implementation so every check exits with its expected code.",
+        *intro,
         "Do not edit or weaken the `## Verification` section, and do not",
         "uncheck completed tasks.",
         "",
