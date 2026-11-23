@@ -66,20 +66,20 @@ In each **member repository**:
 
 ```sh
 specify extension add multirepo --from \
-  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v0.9.0.zip
+  https://github.com/joaopaschuino/speckit-multirepo/archive/refs/tags/v1.0.0.zip
 ```
 
 In the **central specs repository**, the two commands above plus:
 
 ```sh
 specify workflow step add multi-repo-implement --from \
-  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v0.9.0/step-multi-repo-implement-v0.9.0.zip
+  https://github.com/joaopaschuino/speckit-multirepo/releases/download/v1.0.0/step-multi-repo-implement-v1.0.0.zip
 specify workflow add multi-repo --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo/workflow.yml
 specify workflow add multi-repo-check --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo-check/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo-check/workflow.yml
 specify workflow add multi-repo-bootstrap --from \
-  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v0.9.0/workflow/multi-repo-bootstrap/workflow.yml
+  https://raw.githubusercontent.com/joaopaschuino/speckit-multirepo/v1.0.0/workflow/multi-repo-bootstrap/workflow.yml
 ```
 
 (The step install asks an interactive trust confirmation before downloading —
@@ -89,7 +89,7 @@ default-deny; answer `yes`.)
 
 ```sh
 ./install.sh central /path/to/central-repo                # local (--dev) mode
-./install.sh member  /path/to/member-repo --release v0.9.0 # release mode
+./install.sh member  /path/to/member-repo --release v1.0.0 # release mode
 ```
 
 `install.sh` runs, respectively:
@@ -112,25 +112,16 @@ idempotently. Nothing else in your repositories is touched; governance
 bundles are regenerated per dispatch, so there is nothing to migrate.
 
 ```sh
-./install.sh central /path/to/central-repo --release v0.9.0   # or --dev <clone-dir>
-./install.sh member  /path/to/member-a --release v0.9.0
-./install.sh member  /path/to/member-b --release v0.9.0
+./install.sh central /path/to/central-repo --release v1.0.0   # or --dev <clone-dir>
+./install.sh member  /path/to/member-a --release v1.0.0
+./install.sh member  /path/to/member-b --release v1.0.0
 
 specify workflow run multi-repo-check   # verify: every member should report ready
 ```
 
-Upgrading from 0.8.x or older: 0.9.0 renamed the extension id from
-`multi-repo` to `multirepo`. `install.sh` removes the old `multi-repo`
-extension first (its commands would collide with the new aliases) and
-carries `multi-repo-config.yml` over as `multirepo-config.yml`; by hand, run
-`specify extension remove multi-repo --force` before the `extension add`
-below. Upgrade the central repository and every member together — the
-orchestrator dispatches `speckit.multirepo.implement`, which a member still
-on 0.8.x does not have.
-
-Read the `Upgrade` section of the target version in the
-[CHANGELOG](CHANGELOG.md) first — some releases carry extra steps (for
-example manifest format changes).
+Read the target version's entry in the [CHANGELOG](CHANGELOG.md) first —
+a release may carry an `Upgrade` section with extra steps (for example
+manifest format changes).
 
 If your `PATH` carries a `specify` older than 1.1.0, point the script at the
 right binary: `SPECIFY_BIN=/path/to/specify ./install.sh …`.
@@ -567,15 +558,10 @@ active feature) and `--auto` for a non-interactive run.
    with the source files (`report.md`, `<member>.log`,
    `<member>.feedback.md`) for drill-down. The path is printed in the reply.
 
-**Naming convention.** From 0.9.0 the extension id is `multirepo` (one
-word), so every command is `speckit.multirepo.<name>` — skill
-`speckit-multirepo-<name>`. Spec Kit requires an extension's command names to
-be `speckit.<extension-id>.<command>`, which is why the rename covers the id
-and not just new commands. The pre-0.9.0 names (`speckit.multi-repo.<name>`,
-skill `speckit-multi-repo-<name>`) stay registered as aliases, so existing
-habits and scripts keep working on agents that support aliases (Claude Code,
-Codex, …); agents that ignore aliases (for example Copilot skills) only list
-the new names. The workflows (`multi-repo`, `multi-repo-check`,
+**Naming convention.** The extension id is `multirepo` (one word), so
+every command is `speckit.multirepo.<name>` — skill
+`speckit-multirepo-<name>` (Spec Kit requires an extension's command names
+to be `speckit.<extension-id>.<command>`). The workflows (`multi-repo`, `multi-repo-check`,
 `multi-repo-bootstrap`) and the step type (`multi-repo-implement`) keep their
 names.
 

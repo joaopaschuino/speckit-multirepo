@@ -17,7 +17,7 @@
 #
 # Sources:
 #   --dev <dir>   local package directory (default: this script's directory)
-#   --release V   GitHub release tag, e.g. v0.5.0 — installs from the
+#   --release V   GitHub release tag, e.g. v1.0.0 — installs from the
 #                 published release artifacts
 #
 # Environment:
@@ -54,33 +54,13 @@ command -v "$SPECIFY_BIN" >/dev/null 2>&1 || {
 project="$(cd "$project" && pwd)"
 cd "$project"
 
-# 0.9.0 renamed the extension id multi-repo -> multirepo. The old install
-# provides the speckit.multi-repo.* names the new one declares as aliases, so
-# it is removed first; its settings file carries over.
-legacy="$project/.specify/extensions/multi-repo"
-legacy_config=""
-if [ -d "$legacy" ]; then
-  if [ -f "$legacy/multi-repo-config.yml" ]; then
-    legacy_config="$(mktemp)"
-    cp "$legacy/multi-repo-config.yml" "$legacy_config"
-  fi
-  "$SPECIFY_BIN" extension remove multi-repo --force \
-    || echo "warning: could not remove the pre-0.9.0 'multi-repo' extension" >&2
-fi
-
 # `extension add` can exit 0 without installing (e.g. a declined prompt);
-# with the legacy install already removed, that must not pass as success.
-installed_id=""
+# that must not pass as success.
 require_installed() {
-  for id in multirepo multi-repo; do
-    if [ -f "$project/.specify/extensions/$id/extension.yml" ]; then
-      installed_id="$id"
-      return 0
-    fi
-  done
-  echo "error: the extension was not installed." >&2
-  [ -n "$legacy_config" ] && echo "previous settings saved at $legacy_config" >&2
-  exit 1
+  if [ ! -f "$project/.specify/extensions/multirepo/extension.yml" ]; then
+    echo "error: the extension was not installed." >&2
+    exit 1
+  fi
 }
 
 if [ "$mode" = "dev" ]; then
@@ -106,12 +86,6 @@ else
     "$SPECIFY_BIN" workflow add multi-repo-check --from "$wf_check_url"
     "$SPECIFY_BIN" workflow add multi-repo-bootstrap --from "$wf_bootstrap_url"
   fi
-fi
-
-# Restore the settings under the id actually installed (a pre-0.9.0
-# --release still installs as multi-repo).
-if [ -n "$legacy_config" ]; then
-  mv "$legacy_config" "$project/.specify/extensions/$installed_id/$installed_id-config.yml"
 fi
 
 # Member repositories get the persistent governance pointer in AGENTS.md:

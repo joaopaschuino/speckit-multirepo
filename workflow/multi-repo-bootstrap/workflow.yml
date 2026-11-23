@@ -2,7 +2,7 @@ schema_version: "1.0"
 workflow:
   id: "multi-repo-bootstrap"
   name: "Multi-Repo Workspace Bootstrap"
-  version: "0.9.0"
+  version: "1.0.0"
   author: "Joao Victor"
   description: "Clone the workspace members missing locally from their manifest url, and git-ignore member clones inside the central repository — dispatches nothing"
 

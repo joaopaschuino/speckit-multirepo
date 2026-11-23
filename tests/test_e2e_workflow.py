@@ -294,10 +294,7 @@ def test_extension_installs_and_registers_commands(tmp_path, fake_agent, monkeyp
     assert (skills / "speckit-multirepo-domain").exists()
     assert (skills / "speckit-multirepo-reverse").exists()
     assert (skills / "speckit-multirepo-orchestrate").exists()
-    # Pre-0.9.0 names stay invocable through aliases.
-    for name in ("implement", "tasks", "help", "domain", "reverse", "workspace"):
-        assert (skills / f"speckit-multi-repo-{name}").exists(), name
-    assert not (skills / "speckit-multi-repo-orchestrate").exists()
+    assert not list(skills.glob("speckit-multi-repo-*"))
     hooks = (member / ".specify" / "extensions.yml").read_text(encoding="utf-8")
     assert "after_tasks" in hooks
     assert "speckit.multirepo.tasks" in hooks

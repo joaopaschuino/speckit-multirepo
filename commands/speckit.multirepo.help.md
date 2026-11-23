@@ -101,10 +101,8 @@ Command invocation syntax varies by integration (skills-mode agents register
 `speckit-multirepo-tasks`, others `speckit.multirepo.tasks`) — quote the
 form present in this repository's agent command directory.
 
-**Naming convention.** From 0.9.0 the extension id is `multirepo` (one
-word): every command is `speckit.multirepo.<name>` (skill
-`speckit-multirepo-<name>`). The pre-0.9.0 `speckit.multi-repo.<name>` names
-remain as aliases where the agent supports them; recommend the new form. The
+**Naming convention.** The extension id is `multirepo` (one word): every
+command is `speckit.multirepo.<name>` (skill `speckit-multirepo-<name>`). The
 workflows (`multi-repo`, `multi-repo-check`, `multi-repo-bootstrap`) and the
 step type `multi-repo-implement` keep their names.
 
