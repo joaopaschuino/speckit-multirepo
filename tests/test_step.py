@@ -1372,6 +1372,22 @@ def test_passing_checks_with_open_tasks_are_incomplete(
     )
 
 
+def test_checkboxes_in_examples_are_not_tasks(step_module, tmp_path):
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "- [X] T001 implement\n"
+        "<!-- - [ ] T900 template example -->\n"
+        "```markdown\n- [ ] T901 fenced example\n```\n",
+        encoding="utf-8",
+    )
+    step = step_module.MultiRepoImplementStep
+    assert step._open_tasks(tasks) == []
+    assert step._tasks_completed(tasks) is True
+    tasks.write_text(tasks.read_text(encoding="utf-8") + "- [ ] T002 real\n", encoding="utf-8")
+    assert step._open_tasks(tasks) == ["T002"]
+    assert step._tasks_completed(tasks) is False
+
+
 def test_open_tasks_closed_on_retry_are_verified(
     workspace_setup, step_module, monkeypatch, dispatch_calls
 ):

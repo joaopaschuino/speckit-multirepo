@@ -101,9 +101,17 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     return commands
 
 
+def task_lines(text: str) -> list[str]:
+    """Lines of a task file outside HTML comments and fenced code blocks.
+
+    Checkboxes inside those are examples, not tasks.
+    """
+    return _FENCE_RE.sub("", _COMMENT_RE.sub("", text)).splitlines()
+
+
 def has_task_checkboxes(text: str) -> bool:
     """True when the task file lists at least one ``- [ ]``/``- [x]`` task."""
-    return _CHECKBOX_RE.search(text) is not None
+    return any(_CHECKBOX_RE.match(line) for line in task_lines(text))
 
 
 def is_marked_ready(text: str) -> bool:

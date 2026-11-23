@@ -119,6 +119,7 @@ from .verification import (
     kill_process_tree,
     parse_verification,
     run_verification,
+    task_lines,
     update_orchestration_status,
     write_feedback,
     write_report,
@@ -1065,7 +1066,7 @@ class MultiRepoImplementStep(StepBase):
             return []
         return [
             line.strip()[len("- [ ]"):].strip().split(" ", 1)[0]
-            for line in text.splitlines()
+            for line in task_lines(text)
             if re.match(r"^\s*[-*]\s+\[ \]", line)
         ]
 
@@ -1076,7 +1077,7 @@ class MultiRepoImplementStep(StepBase):
             text = tasks_path.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
             return False
-        marks = _CHECKBOX_RE.findall(text)
+        marks = [m.group("mark") for m in map(_CHECKBOX_RE.match, task_lines(text)) if m]
         return bool(marks) and all(mark != " " for mark in marks)
 
     @staticmethod
