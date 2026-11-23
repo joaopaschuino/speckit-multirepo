@@ -43,7 +43,7 @@ RESULT_LOG_TAIL = 2000
 _SECTION_RE = re.compile(r"^##\s+Verification\s*$", re.IGNORECASE | re.MULTILINE)
 _NEXT_HEADING_RE = re.compile(r"^#{1,2}\s", re.MULTILINE)
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-_FENCE_OPEN_RE = re.compile(r"^\s*(?P<fence>`{3,}|~{3,})")
+_FENCE_OPEN_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)")
 _COMMAND_LINE_RE = re.compile(
     r"^\s*[-*]\s+(?:(?P<name>[^`:\n]+?):\s*)?(?P<tick>`+)(?P<command>.+?)(?P=tick)(?P<rest>.*)$"
 )
@@ -101,6 +101,21 @@ def parse_verification(text: str) -> list[VerificationCommand] | None:
     return commands
 
 
+def _fence_opener(line: str) -> re.Match[str] | None:
+    """Match a fence opener, or None for a line that merely looks like one.
+
+    CommonMark: fences are indented at most 3 spaces, and the info string of
+    a backtick fence may not contain a backtick — so a paragraph starting
+    with an inline ```code``` span does not open a block.
+    """
+    match = _FENCE_OPEN_RE.match(line)
+    if match is None:
+        return None
+    if match.group("fence")[0] == "`" and "`" in match.group("info"):
+        return None
+    return match
+
+
 def _strip_fences(text: str) -> str:
     """Drop fenced code blocks (CommonMark-style) from *text*.
 
@@ -115,8 +130,9 @@ def _strip_fences(text: str) -> str:
     for line in text.splitlines(keepends=True):
         match = _FENCE_OPEN_RE.match(line)
         if fence is None:
-            if match:
-                fence = match.group("fence")
+            opener = _fence_opener(line)
+            if opener:
+                fence = opener.group("fence")
                 pending = [line]
             else:
                 out.append(line)

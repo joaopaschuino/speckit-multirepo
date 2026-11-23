@@ -1411,6 +1411,27 @@ def test_unclosed_fence_keeps_tasks(step_module, tmp_path):
     assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T011"]
 
 
+def test_indented_fence_does_not_close_block(step_module, tmp_path):
+    """A longer fence indented 4+ spaces is content, not a closing fence."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "```\nexample:\n    ````\n- [ ] T900 still inside\n```\n- [ ] T001 real\n",
+        encoding="utf-8",
+    )
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T001"]
+
+
+def test_inline_code_span_is_not_a_fence(step_module, tmp_path):
+    """A line starting with an inline ```code``` span opens no block."""
+    tasks = tmp_path / "s3.md"
+    tasks.write_text(
+        "``` `cmd` ``` renders inline.\n- [ ] T001 real\n"
+        "````\n- [ ] T900 example\n````\n- [ ] T002 real\n",
+        encoding="utf-8",
+    )
+    assert step_module.MultiRepoImplementStep._open_tasks(tasks) == ["T001", "T002"]
+
+
 def test_open_tasks_closed_on_retry_are_verified(
     workspace_setup, step_module, monkeypatch, dispatch_calls
 ):
