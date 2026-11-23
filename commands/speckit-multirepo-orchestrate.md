@@ -57,7 +57,7 @@ Run from the repo root:
 specify workflow run multi-repo-check -i feature=<FEATURE_REL> --json
 ```
 
-The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's output is persisted in the run state: read `.specify/workflows/runs/<run_id>/state.json` and take `.step_results.check.output` (`members` — one entry per declared member, keyed by `repo`, with `status`, `reason`, `participant` — plus `waves`, `not_ready`, `missing`). Consider only participating members (`participant: true`).
+The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's output is persisted in the run state: read `.specify/workflows/runs/<run_id>/state.json` and take `.step_results.check.output` (`members` — one entry per declared member, keyed by `repo`, with `status`, `reason`, `participant` — plus `waves`, `not_ready`, `missing`). Consider only the members the implementation would dispatch: participating (`participant: true`) and not held (no `ready: false`). A held member is excluded by the workflow before its configuration or local presence is checked, so its status never blocks the run — it is only reported (see `not_ready` below).
 
 - **Configuration errors — abort.** When any participant has status `no-dispatch`, `no-integration`, `unknown-integration`, or `constitution-missing`, **do not dispatch**. Report a diagnostic table (member, status, `reason`) and the fix for each:
   - `no-integration` / `unknown-integration` → the member's `.specify/integration.json` or the manifest's `integration` field (re-run `specify init --here --integration <agent>` in the member, or fix the manifest);
@@ -65,7 +65,7 @@ The JSON on stdout is the run outcome (`run_id`, `status`, `error`); the step's 
   - `constitution-missing` → the `constitution` file declared in the manifest does not exist in the central repository.
   Then **STOP**.
 - **Locally absent members** (`not-cloned`, `not-initialized`) → the default `missing: error` would abort the run. Report them and suggest `specify workflow run multi-repo-bootstrap` (clones members with a manifest `url`). Interactively, offer to continue with `-i missing=skip` (only the ready members are dispatched) and wait for the answer; with `--auto`, **STOP** — never skip members silently.
-- `not_ready` members (held by `ready: false`) are reported and are not an error.
+- `not_ready` members (held by `ready: false`, with `held_reason`) are reported and are not an error — whatever their status, they are neither configuration errors nor locally absent for this run.
 - Show the dispatch plan: the waves (in order) and the participating members of each.
 
 If the check itself fails (non-zero exit, unparseable JSON), report its error and **STOP**.
